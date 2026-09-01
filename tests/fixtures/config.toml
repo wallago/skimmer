@@ -1,0 +1,4 @@
+[miniflux]
+url      = "http://localhost:8080"
+username = "user"
+password = "pass"

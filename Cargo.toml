@@ -1,0 +1,73 @@
+[package]
+name         = "skimmer"
+version      = "0.1.0"
+description  = "AI agent that reads your RSS feeds and keeps only what's worth your time."
+authors      = ["wallago <tbd@gmail.com>"]
+license      = "MIT OR Apache-2.0"
+readme       = "README.md"
+repository   = "https://github.com/wallago/skimmer"
+keywords     = []
+categories   = []
+edition      = "2024"
+rust-version = "1.88"
+include      = ["src/**/*", "Cargo.*", "LICENSE*", "README.md", "CHANGELOG.md"]
+
+[dependencies]
+better-panic = "0.3.0"
+clap = { version = "4.6.6", features = [
+  "derive",
+  "env",
+  "wrap_help",
+  "cargo",
+] }
+dirs = "6.0.0"
+miniflux_api = "0.8.0"
+reqwest = "0.13.4"
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.151"
+thiserror = "2.0.19"
+tokio = { version = "1", features = ["full"] }
+toml = "1.1.4"
+tracing = "0.1.44"
+tracing-subscriber = "0.3.23"
+url = "2.5.8"
+
+[dev-dependencies]
+pretty_assertions = "1.4.1"
+rstest            = "0.26"
+
+[profile.dev]
+opt-level = 0
+debug     = true
+
+[profile.test]
+opt-level = 0
+debug     = true
+
+[profile.release]
+opt-level     = 3
+debug         = false
+panic         = "abort"
+lto           = true
+codegen-units = 1
+strip         = true
+
+[profile.bench]
+opt-level = 3
+debug     = false
+
+[lints.rust]
+missing_docs                  = "warn"
+missing_debug_implementations = "warn"
+unreachable_pub               = "warn"
+unused_qualifications         = "warn"
+
+[lints.clippy]
+pedantic                      = { level = "warn", priority = -1 }
+unwrap_used                   = "warn"
+expect_used                   = "warn"
+panic                         = "warn"
+todo                          = "warn"
+dbg_macro                     = "warn"
+print_stdout                  = "warn"
+missing_docs_in_private_items = "warn"

@@ -1,0 +1,254 @@
+name: CI
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  schedule:
+    - cron: "0 0 * * 0"
+permissions:
+  contents: read
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+env:
+  BIN_NAME: "skimmer"
+  CARGO_TERM_COLOR: always
+jobs:
+  build:
+    name: Build for ${{ matrix.target }}
+    # cross needs a nested container engine; it cannot run under act
+    if: ${{ github.actor != 'nektos/act' }}
+    runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: false
+      matrix:
+        target:
+          - x86_64-unknown-linux-gnu
+          - aarch64-unknown-linux-gnu
+          - riscv64gc-unknown-linux-gnu
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@v7
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+      - name: Install cross
+        uses: taiki-e/install-action@cross
+      - name: Cache Cargo dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{ matrix.target }}
+      - name: Build the project
+        run: cross build --locked --verbose --target ${{ matrix.target }}
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ env.BIN_NAME }}-${{ matrix.target }}
+          path: target/${{ matrix.target }}/debug/${{ env.BIN_NAME }}
+          if-no-files-found: error
+  nix:
+    name: Build Nix flake
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: write
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@v7
+      - name: Install Nix
+        uses: nixbuild/nix-quick-install-action@v35
+      - name: Restore and cache Nix store
+        uses: nix-community/cache-nix-action@v7
+        with:
+          primary-key: nix-${{ runner.os }}-${{ hashFiles('flake.nix', 'flake.lock', 'Cargo.lock', 'Cargo.toml') }}
+          restore-prefixes-first-match: nix-${{ runner.os }}-
+          gc-max-store-size-linux: 1073741824
+          purge: true
+          purge-prefixes: nix-${{ runner.os }}-
+          purge-created: 0
+          purge-primary-key: never
+      - name: Check Nix flake
+        run: nix flake check --all-systems
+      - name: Build Nix flake
+        run: nix build
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@v7
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+      - name: Cache Cargo dependencies
+        uses: Swatinem/rust-cache@v2
+      - name: Run tests
+        run: cargo test --locked --all-features
+      - name: Install cargo-llvm-cov
+        uses: taiki-e/install-action@cargo-llvm-cov
+      - name: Generate code coverage
+        run: cargo llvm-cov --lcov --output-path lcov.info --lib
+        env:
+          OUT_DIR: target
+      - name: Upload coverage to Codecov
+        # codecov cannot do a tokenless upload under act
+        if: ${{ github.actor != 'nektos/act' }}
+        uses: codecov/codecov-action@v7
+        with:
+          name: code-coverage-report
+          files: lcov.info
+          fail_ci_if_error: true
+          verbose: true
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+  docs:
+    name: Docs
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@v7
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+      - name: Cache Cargo dependencies
+        uses: Swatinem/rust-cache@v2
+      - name: Check documentation
+        env:
+          RUSTDOCFLAGS: -D warnings
+        run: cargo doc --no-deps --all-features
+  commit-format:
+    name: Commit format
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout the repository
+        if: github.event_name != 'pull_request'
+        uses: actions/checkout@v7
+      - name: Checkout the repository
+        if: github.event_name == 'pull_request'
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+      - name: Run committed
+        if: github.event_name != 'pull_request'
+        uses: crate-ci/committed@master
+        with:
+          args: "-vv"
+          commits: "HEAD"
+      # rebase merge replays every branch commit onto main, so check the range
+      - name: Run committed
+        if: github.event_name == 'pull_request'
+        uses: crate-ci/committed@master
+        with:
+          args: "-vv"
+          commits: "${{ github.event.pull_request.base.sha }}..HEAD"
+  code-format:
+    name: Code format
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@v7
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+      - name: Check code formatting
+        run: cargo fmt --all -- --check
+  file-format:
+    name: File format
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@v7
+      - name: Install editorconfig-checker
+        uses: editorconfig-checker/action-editorconfig-checker@main
+      - name: Check file formatting
+        run: editorconfig-checker
+  toml-format:
+    name: TOML format
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@v7
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+      - name: Install cargo-binstall
+        uses: taiki-e/install-action@cargo-binstall
+      - name: Install taplo
+        run: cargo binstall -y --force taplo-cli
+      - name: Check TOML formatting
+        run: taplo fmt --check --diff
+  clippy:
+    name: Clippy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@v7
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+      - name: Cache Cargo dependencies
+        uses: Swatinem/rust-cache@v2
+      - name: Check lints
+        run: cargo clippy --all-targets --all-features -- -D warnings
+  deny:
+    name: Deny
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@v7
+      - name: Run cargo-deny
+        uses: EmbarkStudios/cargo-deny-action@v2
+        with:
+          command: check all
+  machete:
+    name: Unused dependencies
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@v7
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+      - name: Install cargo-binstall
+        uses: taiki-e/install-action@cargo-binstall
+      - name: Install cargo-machete
+        run: cargo binstall -y --force cargo-machete
+      - name: Check for unused dependencies
+        run: cargo machete
+  links:
+    name: Links
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@v7
+      - name: Run lychee
+        uses: lycheeverse/lychee-action@v2
+        with:
+          args: --verbose --no-progress '*.md'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  typos:
+    name: Typos
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@v7
+      - name: Check typos
+        uses: crate-ci/typos@master
+  msrv:
+    name: MSRV
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@v7
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+      - name: Install cargo-binstall
+        uses: taiki-e/install-action@cargo-binstall
+      - name: Install cargo-msrv
+        run: cargo binstall -y --force cargo-msrv
+      - name: Run cargo-msrv
+        run: cargo msrv verify
