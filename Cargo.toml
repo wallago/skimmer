@@ -14,6 +14,7 @@ include      = ["src/**/*", "Cargo.*", "LICENSE*", "README.md", "CHANGELOG.md"]
 
 [dependencies]
 better-panic = "0.3.0"
+chrono = "0.4.45"
 clap = { version = "4.6.6", features = [
   "derive",
   "env",

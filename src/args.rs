@@ -26,6 +26,10 @@ pub struct Args {
     /// Path to the application config file (TOML).
     #[arg(long, value_name = "PATH")]
     pub config: Option<std::path::PathBuf>,
+
+    /// Rss list feed.
+    #[arg(long, value_name = "PATH", default_value_t = false)]
+    pub feeds: bool,
 }
 
 #[cfg(test)]

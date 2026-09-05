@@ -1,0 +1,25 @@
+[miniflux]
+url      = "http://0.0.0.0"
+username = "username"
+password = "password"
+
+[claude]
+api_key = "key"
+model   = "claude-opus-5"
+
+[[topic]]
+name       = "rust"
+question   = "What's going on interesting in the Rust world the past day?"
+feeds      = ["Reddit Rust", "This Week in Rust"]
+web_search = true
+
+[[topic]]
+name     = "youtube"
+question = "What's new for those video channel the past week?"
+feeds    = ["Youtube DevOps Toolbox", "Youtube Vimjoyer"]
+
+[[topic]]
+name       = "bicycle"
+question   = "What's new and interesting in the bicycle world the past day?"
+categories = ["cycling"]
+web_search = true                                                            # later
