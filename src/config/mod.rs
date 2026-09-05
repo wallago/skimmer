@@ -2,13 +2,16 @@
 
 use std::path::Path;
 
+use claude::Claude;
 use miniflux::Miniflux;
 use serde::Deserialize;
+use topic::Topic;
 
-use crate::{config::claude::Claude, prelude::*};
+use crate::prelude::*;
 
-mod claude;
+pub(crate) mod claude;
 mod miniflux;
+mod topic;
 
 /// Configuration loaded from `config.toml`.
 #[derive(Clone, Debug, Default, Deserialize)]
@@ -16,6 +19,7 @@ mod miniflux;
 pub struct Config {
     pub(crate) miniflux: Miniflux,
     pub(crate) claude: Claude,
+    pub(crate) topic: Vec<Topic>,
 }
 
 impl Config {

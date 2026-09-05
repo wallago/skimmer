@@ -12,6 +12,12 @@ pub mod args;
 /// Claude API.
 pub mod claude;
 
+/// Rss server.
+pub mod rss;
+
+/// Report.
+pub mod report;
+
 /// Config file.
 pub mod config;
 
@@ -23,9 +29,7 @@ pub mod prelude;
 
 use std::str::FromStr;
 
-use miniflux_api::MinifluxApi;
 use prelude::*;
-use tracing::info;
 
 use crate::config::Config;
 
@@ -38,12 +42,23 @@ pub async fn run(args: &Args) -> Result<()> {
     better_panic::install();
     let config = Config::load(args.config.as_deref())?;
     let (url, username, password) = config.miniflux.get_all();
-    // TODO
-    // make a struct for miniflux and client
-    let miniflux = MinifluxApi::new(&url::Url::from_str(&url)?, username, password);
-    let client = reqwest::Client::new();
-    let key = config.claude.get_key();
-    claude::say_hello(key).await?;
+    let mut report = report::Report::new();
+    let rss = rss::Rss::new(url::Url::from_str(&url)?, username, password);
+    if args.feeds {
+        let feeds = rss.get_feeds().await?;
+        let titles = feeds
+            .into_iter()
+            .map(|feed| feed.title)
+            .collect::<Vec<String>>();
+        tracing::info!("{:#?}", titles);
+        return Ok(());
+    }
+
+    let claude = claude::Claude::new(config.claude);
+
+    report.add(claude.request_something("hello how are you ?").await?);
+    report.generate(claude)?;
+
     Ok(())
 }
 

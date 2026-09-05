@@ -1,0 +1,180 @@
+ ▐▛███▛█   Claude Code v2.1.245
+▝▜██████▀  Sonnet 5 · Claude Pro
+  ▝▝ ▝▝    ~/Personal-Projects/skimmer
+
+
+❯ i try to make a report for some stuff to search or analyze , for report how   
+  you will design it at the end it will be a md but maybe later                 
+
+  Read 6 files, ran 1 shell command (ctrl+o to expand)
+
+● Now I've got the picture: skimmer pulls RSS items from Miniflux, runs them
+  past Claude, and Report currently just accumulates raw response strings. Let
+  me lay out how I'd design the report, then check a couple of decisions with
+  you.
+
+  Core idea: separate the data from the format
+
+  Keep Report as a plain data structure (serde-friendly). Give it one method
+  today, to_markdown(&self) -> String. Because the struct is serde-serializable,
+  JSON/other formats later cost almost nothing — but I would not build a
+  Renderer trait or format enum now (only one real target; per your CLAUDE.md
+  that's speculative).
+
+  pub(crate) struct Report {
+      generated_at: OffsetDateTime,
+      model: String,
+      stats: Stats,          // skimmed: usize, kept: usize
+      summary: Option<String>,   // one-paragraph digest from Claude
+      items: Vec<Item>,
+  }
+
+  pub(crate) struct Item {
+      title: String,
+      url: Url,
+      source: String,             // feed / site name
+      published: Option<OffsetDateTime>,
+      score: Option<u8>,          // Claude's 0–10 relevance, if you rank
+      topics: Vec<String>,
+      reason: String,             // why it's worth your time
+      summary: Option<String>,    // 1–2 sentence gist
+  }
+
+  This couples to the Claude side: instead of request_something returning free
+  text, ask Claude for a JSON array of per-article verdicts and deserialize
+  straight into Vec<Item>. The report shape and the prompt shape get designed
+  together.
+
+  Markdown layout I'd render
+
+  # Skimmer report — 2026-09-06
+
+  _2026-09-06 14:32 UTC · claude-opus-5 · 128 skimmed → 7 kept_
+
+  ## Summary
+  Short digest paragraph.
+
+  ## Kept
+
+  ### 1. [Article title](https://…)
+  **Source:** Lobsters · **Published:** 2026-09-05 · **Score:** 8/10 · rust,
+  async
+
+  Why: one or two sentences.
+
+  ---
+
+  ### 2. …
+
+  run() then writes the string to a path (from args/config) or stdout.
+
+● User declined to answer questions
+  ⎿  · What is each report item, really? This drives the fields and the layout. 
+     (Kept articles + why / Leads to research / Both sections)
+     · How should items be organized in the Markdown? (Flat, ranked / Grouped by
+     topic / Grouped by feed)
+
+✻ Cogitated for 2m 0s
+
+❯ no i prefer something more global like a lot of articles but as question is   
+  like what going on interesting in rust world the past day ? and same but for  
+  bicycle world by searching in rss given flux and online more generic research 
+
+● That changes the shape a lot. The report isn't a list of articles — it's a set
+  of topic briefings, each answering one standing question by synthesizing many
+  articles into prose + citing them.
+
+  Data model
+
+  pub(crate) struct Report {
+      generated_at: OffsetDateTime,
+      model: String,
+      window: String,              // "past 24h"
+      briefings: Vec<Briefing>,
+  }
+
+  pub(crate) struct Briefing {
+      question: String,            // "What's interesting in the Rust world this
+  past day?"
+      digest: String,              // Claude's synthesized markdown prose
+      highlights: Vec<Highlight>,  // the few things that actually matter, each 
+  linked
+      sources: Vec<Source>,        // everything that fed the digest
+      scanned: usize,              // how many entries were considered
+  }
+
+  struct Highlight {
+      headline: String,
+      detail: String,              // 1–2 sentences
+      links: Vec<Url>,
+  }
+
+  struct Source { title: String, url: Url, feed: String }
+
+  Report stays pure data with one method, to_markdown(&self) -> String. It's
+  serde-serializable so JSON later is free — but no renderer trait / format enum
+  now (one target, per your CLAUDE.md).
+
+  Markdown output
+
+  # Skimmer — 2026-09-06
+
+  _Past 24h · claude-opus-5_
+
+  ## What's interesting in the Rust world this past day?
+
+  Two or three paragraphs of synthesis: the themes, what's new, what's
+  noise. Written by Claude from the entries below.
+
+  **Highlights**
+  - **Async Drop hits nightly** — closes a long-standing soundness gap.
+  [src](url)
+  - **This Week in Rust #560** — notable RFCs on… [src](url)
+
+  <details><summary>Sources — 23 entries</summary>
+
+  - [Announcing Rust 1.x](url) — Rust Blog
+  - [title](url) — Lobsters
+  - …
+  </details>
+
+  ## What's new in the bicycle world?
+  …
+
+  What drives it: config topics
+
+  Each topic = a question + which feeds to pull from (+ later, whether to also
+  do generic web research):
+
+  [[topic]]
+  name = "rust"
+  question = "What's going on interesting in the Rust world the past day?"
+  feeds = ["Rust Blog", "This Week in Rust", "Lobsters"]
+
+  [[topic]]
+  name = "bicycle"
+  question = "What's new and interesting in the bicycle world?"
+  categories = ["cycling"]
+  web_search = true   # later
+
+  Pipeline (per topic)
+
+  1. Rss → fetch entries in the time window from that topic's feeds/categories.
+  2. (later) generic web research → more entries.
+  3. Claude → given [{title, summary, link, feed}] + the question, return JSON {
+     digest, highlights[] }.
+  4. Push one Briefing into Report.
+  5. report.to_markdown() → write to file (path from args/config) or stdout.
+
+  This replaces request_something's free-text return with a structured JSON
+  response you deserialize.
+
+  Open points
+
+  - v1 scope: RSS-only, leave web_search as a config field that does nothing
+    yet? I'd say yes — ship the RSS path first.
+  - Window: default past 24h, overridable with a CLI arg like --since 48h?
+  - One Claude call per topic (simple, matches config, parallelizable) vs. one
+    big call — I'd go per-topic.
+
+✻ Sautéed for 32s

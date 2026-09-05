@@ -22,7 +22,10 @@ pub enum Error {
     Serialize(#[from] serde_json::Error),
     /// Error returned by the Anthropic API.
     #[error("Anthropic API error: `{0}`")]
-    Api(String),
+    AnthropicApi(String),
+    /// Error returned by the miniflux API.
+    #[error("Miniflux API error: `{0}`")]
+    MinifluxApi(#[from] miniflux_api::ApiError),
 }
 
 /// Type alias for the standard [`Result`] type.
