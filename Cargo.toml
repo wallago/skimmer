@@ -22,6 +22,7 @@ clap = { version = "4.6.6", features = [
   "cargo",
 ] }
 dirs = "6.0.0"
+duration-str = "0.21.0"
 miniflux_api = "0.8.0"
 reqwest = "0.13.4"
 serde = { version = "1.0.229", features = ["derive"] }

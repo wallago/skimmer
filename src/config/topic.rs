@@ -1,10 +1,16 @@
+use std::time::Duration;
+
+use duration_str::parse;
 use serde::Deserialize;
+
+use crate::prelude::*;
 
 #[derive(Clone, Debug, Default, Deserialize)]
 pub(crate) struct Topic {
     name: String,
     question: String,
     feeds: Vec<String>,
+    interval: String,
 }
 
 impl Topic {
@@ -18,6 +24,10 @@ impl Topic {
 
     pub(crate) fn get_feeds(&self) -> &[String] {
         &self.feeds
+    }
+
+    pub(crate) fn get_interval(&self) -> Result<Duration> {
+        Ok(parse(&self.interval).map_err(|err| Error::IntervalParsing(err))?)
     }
 }
 

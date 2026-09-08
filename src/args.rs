@@ -1,5 +1,6 @@
 //! Command-line arguments parser.
 
+use chrono::{DateTime, NaiveDate, Utc};
 use clap::Parser;
 
 /// Argument parser powered by [`clap`].
@@ -30,6 +31,14 @@ pub struct Args {
     /// Rss list feed.
     #[arg(long, value_name = "PATH", default_value_t = false)]
     pub feeds: bool,
+
+    /// Since last poll.
+    #[arg(short, long)]
+    pub since: Option<DateTime<Utc>>,
+
+    /// Build the prompt and print it without calling the API.
+    #[arg(long, default_value_t = false)]
+    pub dry_run: bool,
 }
 
 #[cfg(test)]

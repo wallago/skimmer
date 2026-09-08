@@ -11,7 +11,7 @@ use crate::prelude::*;
 
 pub(crate) mod claude;
 mod miniflux;
-mod topic;
+pub(crate) mod topic;
 
 /// Configuration loaded from `config.toml`.
 #[derive(Clone, Debug, Default, Deserialize)]

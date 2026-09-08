@@ -1,6 +1,7 @@
 //! Error handler implementation.
 
 use thiserror::Error as ThisError;
+use toml::value::DatetimeParseError;
 
 /// Errors that can occur while running [`run`].
 #[derive(Debug, ThisError)]
@@ -26,6 +27,21 @@ pub enum Error {
     /// Error returned by the miniflux API.
     #[error("Miniflux API error: `{0}`")]
     MinifluxApi(#[from] miniflux_api::ApiError),
+    /// Error may occur by founding state path.
+    #[error("State path not found")]
+    StatePath,
+    /// Error may occur while de parsing toml.
+    #[error("Toml de parsing error: `{0}`")]
+    TomlDeParsing(#[from] toml::de::Error),
+    /// Error may occur while ser parsing toml.
+    #[error("Toml ser parsing error: `{0}`")]
+    TomlSerParsing(#[from] toml::ser::Error),
+    /// Error may occur while parsing interval.
+    #[error("Interval parsing error: `{0}`")]
+    IntervalParsing(String),
+    /// Error may occur while date parsing toml.
+    #[error("Toml date parsing error: `{0}`")]
+    TomlDateParsing(#[from] DatetimeParseError),
 }
 
 /// Type alias for the standard [`Result`] type.
