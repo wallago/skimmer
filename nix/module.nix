@@ -22,5 +22,22 @@ in
 
   config = lib.mkIf cfg.enable {
     environment.systemPackages = [ cfg.package ];
+
+    systemd.services.skimmer = {
+      serviceConfig = {
+        Type = "oneshot";
+        ExecStart = "${cfg.package} --config %d/config";
+        LoadCredential = "config:${cfg.configFile}";
+        StateDirectory = "skimmer"; # /var/lib/skimmer
+      };
+    };
+    systemd.timers.skimmer = {
+      wantedBy = [ "timers.target" ];
+      timerConfig = {
+        OnCalendar = "daily";
+        Persistent = true;
+        RandomizedDelaySec = "15m";
+      };
+    };
   };
 }
