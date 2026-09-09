@@ -1,14 +1,22 @@
+//! Miniflux connection settings.
+
 use serde::Deserialize;
 
+/// The `[miniflux]` table: where the feeds come from.
 #[derive(Clone, Debug, Default, Deserialize)]
-pub(crate) struct Miniflux {
+pub struct Miniflux {
+    /// Base URL of the Miniflux server.
     url: String,
+    /// Account to read feeds as.
     username: String,
+    /// That account's password.
     password: String,
 }
 
 impl Miniflux {
-    pub(crate) fn get_all(self) -> (String, String, String) {
+    /// Consumes the config and hands back `(url, username, password)`.
+    #[must_use]
+    pub fn get_all(self) -> (String, String, String) {
         (self.url, self.username, self.password)
     }
 }

@@ -1,17 +1,26 @@
+//! Anthropic API settings.
+
 use serde::Deserialize;
 
+/// The `[claude]` table: who to ask, and with what credentials.
 #[derive(Clone, Debug, Default, Deserialize)]
-pub(crate) struct Claude {
+pub struct Claude {
+    /// Anthropic API key.
     api_key: String,
+    /// Model id.
     model: String,
 }
 
 impl Claude {
-    pub(crate) fn get_key(&self) -> &str {
+    /// The API key.
+    #[must_use]
+    pub fn get_key(&self) -> &str {
         &self.api_key
     }
 
-    pub(crate) fn get_model(&self) -> &str {
+    /// The model id.
+    #[must_use]
+    pub fn get_model(&self) -> &str {
         &self.model
     }
 }
