@@ -1,6 +1,6 @@
 //! Config file setup.
 
-use std::path::Path;
+use std::{collections::HashMap, path::Path};
 
 use claude::Claude;
 use miniflux::Miniflux;
@@ -9,17 +9,32 @@ use topic::Topic;
 
 use crate::prelude::*;
 
-pub(crate) mod claude;
+/// Anthropic API settings.
+mod claude;
+
+/// Miniflux connection settings.
 mod miniflux;
-pub(crate) mod topic;
+
+/// Per-topic settings.
+mod topic;
+
+/// The config types, for modules that hold one.
+pub mod prelude {
+    pub use super::claude::Claude;
+    pub use super::miniflux::Miniflux;
+    pub use super::topic::Topic;
+}
 
 /// Configuration loaded from `config.toml`.
 #[derive(Clone, Debug, Default, Deserialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct Config {
-    pub(crate) miniflux: Miniflux,
-    pub(crate) claude: Claude,
-    pub(crate) topic: Vec<Topic>,
+    /// Where the feeds come from.
+    pub miniflux: Miniflux,
+    /// Which model summarizes them, and with what key.
+    pub claude: Claude,
+    /// The topics to brief on, one `[topic.x]` each.
+    pub topic: HashMap<String, Topic>,
 }
 
 impl Config {

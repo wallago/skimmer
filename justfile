@@ -86,8 +86,8 @@ check:
 # Format Rust + Nix sources in place
 [group('dev')]
 fmt:
-    cargo fmt
-    nixfmt flake.nix package.nix module.nix
+    cargo fmt  --all -- --check
+    nixfmt flake.nix nix/package.nix nix/module.nix
 
 # Run the test suite. Usage: just test [pattern]
 [group('dev')]

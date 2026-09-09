@@ -1,32 +1,41 @@
+//! The markdown report: one section per topic, written to a file.
+
+use std::fmt::Write as WriteFmt;
 use std::fs::File;
-use std::io::prelude::*;
+use std::io::Write as WriteIO;
 
 use chrono::{DateTime, Utc};
 use miniflux_api::models::Entry;
 
-use crate::claude::Claude;
-use crate::claude::output::Analysis;
-use crate::prelude::*;
-use crate::topic::Topic;
+use super::topic::Topic;
+use crate::{
+    ext::prelude::{Claude, *},
+    prelude::*,
+};
 
-struct Highlight {
-    headline: String,
-    detail: String,
-    // links: Vec<Url>,
-}
-
+/// One entry as it appears in a report's source list.
 struct Source {
+    /// Miniflux entry id, matched against `Highlight::entry_ids`.
     id: i64,
+    /// Entry title.
     title: String,
+    /// Title of the feed it came from.
     feed: String,
+    /// Link to the entry.
     url: String,
 }
 
+/// One topic's section: what was asked, what Claude said, what it read.
 pub(crate) struct Briefing {
+    /// The question put to Claude.
     question: String,
+    /// Start of the window these entries came from.
     since: DateTime<Utc>,
+    /// Claude's digest and highlights.
     analysis: Analysis,
+    /// Every entry scanned, for the sources block and the highlight links.
     sources: Vec<Source>,
+    /// How many entries were scanned.
     scanned: usize,
 }
 
@@ -49,40 +58,52 @@ impl Briefing {
                 .map(|source| format!("[src]({})", source.url))
                 .collect::<Vec<String>>()
                 .join(" ");
-            out.push_str(&format!(
-                "- **{}** — {} {}\n",
+            let _ = writeln!(
+                out,
+                "- **{}** — {} {}",
                 highlight.get_headline(),
                 highlight.get_detail(),
                 links
-            ));
+            );
         }
 
-        out.push_str(&format!(
+        let _ = write!(
+            out,
             "\n<details><summary>Sources — {} entries</summary>\n\n",
             self.scanned
-        ));
+        );
         for source in &self.sources {
-            out.push_str(&format!(
+            let _ = writeln!(
+                out,
                 "- [{}]({}) — {}\n",
                 source.title, source.url, source.feed
-            ));
+            );
         }
         out.push_str("</details>\n");
         out
     }
 }
 
+/// Every topic's briefing, ready to write out.
 pub(crate) struct Report {
+    /// One per topic, in the order they were added.
     briefings: Vec<Briefing>,
 }
 
 impl Report {
+    /// An empty report.
     pub(crate) fn new() -> Self {
         Self {
             briefings: Vec::new(),
         }
     }
 
+    /// Writes the whole report to `report_<timestamp>.trash.md` in the working
+    /// directory.
+    ///
+    /// # Errors
+    ///
+    /// Returns an [`Error`] if the file cannot be created or written.
     pub(crate) fn generate(&self, claude: &Claude) -> Result<()> {
         let now = Utc::now();
         let mut out = format!(
@@ -100,6 +121,8 @@ impl Report {
         Ok(())
     }
 
+    /// Adds one topic's briefing, keeping the entries so highlights can link
+    /// back to them.
     pub(crate) fn add(&mut self, topic: &Topic, entries: &[Entry], analysis: Analysis) {
         self.briefings.push(Briefing {
             question: topic.get_question().to_string(),

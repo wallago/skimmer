@@ -1,6 +1,6 @@
 //! Command-line arguments parser.
 
-use chrono::{DateTime, NaiveDate, Utc};
+use chrono::{DateTime, Utc};
 use clap::Parser;
 
 /// Argument parser powered by [`clap`].
