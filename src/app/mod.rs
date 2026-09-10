@@ -16,6 +16,9 @@ mod topic;
 /// Report.
 mod report;
 
+/// Render output.
+mod render;
+
 /// Everything a run needs, wired together once.
 pub(crate) struct App {
     /// File save.
@@ -40,7 +43,7 @@ impl App {
         let rss = Rss::new(url, username, password).await?;
         let claude = Claude::new(&config.claude);
         let topics = Topic::new(&config.topic, args.since, &state, &rss)?;
-        let report = Report::new();
+        let report = Report::new(&config.output)?;
         Ok(Self {
             state,
             rss,

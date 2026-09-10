@@ -1,4 +1,13 @@
 [miniflux]
-url      = "http://localhost:8080"
-username = "user"
-password = "pass"
+url      = "https://localhost"
+username = "admin"
+password = "password"
+
+[claude]
+api_key = "sk-key"
+model   = "claude-haiku-4-5"
+
+[topic.rust]
+question = "What's going on interesting in the Rust world the past day?"
+feeds    = ["Reddit Rust", "This Week in Rust"]
+interval = "7d"

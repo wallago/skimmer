@@ -16,7 +16,15 @@ async fn main() -> ExitCode {
         2 => Level::DEBUG,
         _ => Level::TRACE, // -vvv and beyond
     };
-    tracing_subscriber::fmt().with_max_level(level).init();
+    let under_journal = std::env::var_os("JOURNAL_STREAM").is_some();
+    let fmt = tracing_subscriber::fmt()
+        .with_max_level(level)
+        .with_writer(std::io::stderr);
+    if under_journal {
+        fmt.without_time().with_ansi(false).init();
+    } else {
+        fmt.init();
+    }
     match skimmer::run(&args).await {
         Ok(()) => ExitCode::SUCCESS,
         Err(err) => {

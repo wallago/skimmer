@@ -25,7 +25,7 @@ udeps:
 # Run tests once under coverage instrumentation
 [group('dev')]
 coverage pattern="":
-    cargo llvm-cov --no-report nextest {{ if pattern != "" { "-E 'test(" + pattern + ")'" } else { "" } }}
+    cargo llvm-cov nextest {{ if pattern != "" { "-E 'test(" + pattern + ")'" } else { "" } }}
 
 # Open an HTML report from the last coverage run (run `just coverage` first)
 [group('dev')]

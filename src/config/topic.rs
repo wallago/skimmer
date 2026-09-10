@@ -47,19 +47,15 @@ mod tests {
 
     #[test]
     fn should_deserializes_toml_list() {
-        let modules: Topic = toml::from_str(
-            "
-                question = \"test ?\", 
-                feeds = [\"test\"]",
-        )
-        .unwrap();
+        let modules: Topic =
+            toml::from_str("question = \"test ?\"\nfeeds = [\"test\"]\ninterval = \"23h\"")
+                .unwrap();
         assert_eq!(modules.question, "test ?");
+        assert_eq!(modules.interval, "23h");
         assert_eq!(modules.feeds, ["test"].to_vec());
         assert!(
             toml::from_str::<Topic>(
-                "
-                question = [\"test ?\"], 
-                feeds = \"test\"",
+                "question = [\"test ?\"]\nfeeds = \"test\"\ninterval = [\"23h\"]",
             )
             .is_err()
         );

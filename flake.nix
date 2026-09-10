@@ -42,7 +42,12 @@
             };
 
             # ── Toolchain ─────────────────────────────────────────────
-            rust = pkgs.rust-bin.nightly.latest.default;
+            rust = pkgs.rust-bin.nightly.latest.default.override {
+              extensions = [
+                "llvm-tools-preview"
+                "rust-src"
+              ];
+            };
 
             naersk' = pkgs.callPackage naersk {
               cargo = rust;
@@ -78,6 +83,7 @@
               cargo-audit
               cargo-machete
               cargo-edit
+              cargo-llvm-cov
               typos
               committed
               git-cliff

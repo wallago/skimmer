@@ -35,6 +35,8 @@ pub struct Config {
     pub claude: Claude,
     /// The topics to brief on, one `[topic.x]` each.
     pub topic: HashMap<String, Topic>,
+    /// Output dir.
+    pub output: String,
 }
 
 impl Config {
@@ -68,5 +70,91 @@ impl Config {
             .map_err(|error| Error::Config(format!("{}: {error}", path.display())))?;
         // Deserialize content in TOML format
         toml::from_str(&raw).map_err(|error| Error::Config(format!("{}: {error}", path.display())))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::{path::Path, time::Duration};
+
+    use pretty_assertions::assert_eq;
+
+    use super::*;
+
+    /// A config file that matches [`Config`].
+    const FIXTURE: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/tests/fixtures/config.toml");
+
+    /// A config file that is TOML, but not a valid [`Config`].
+    const INVALID_FIXTURE: &str = concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/tests/fixtures/config_invalid.toml"
+    );
+
+    #[test]
+    fn load_config_from_file() {
+        let config = Config::from_file(Path::new(FIXTURE)).unwrap();
+        check_fixture_config(config);
+    }
+
+    #[test]
+    fn load_config_with_args() {
+        let config = Config::load(Some(Path::new(FIXTURE))).unwrap();
+        check_fixture_config(config);
+    }
+
+    #[test]
+    fn load_config_without_args() {
+        drop(Config::load(None));
+    }
+
+    #[test]
+    fn load_config_from_missing_file() {
+        let path = Path::new(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/tests/fixtures/nope.toml"
+        ));
+        assert!(Config::from_file(path).is_err());
+        assert!(Config::load(Some(path)).is_err());
+    }
+
+    #[test]
+    fn load_config_from_invalid_file() {
+        assert!(Config::from_file(Path::new(INVALID_FIXTURE)).is_err());
+    }
+
+    #[test]
+    fn default_config_is_empty() {
+        let config = Config::default();
+        assert!(config.topic.is_empty());
+        assert_eq!(config.claude.get_model(), "");
+        assert_eq!(
+            config.miniflux.get_all(),
+            (String::new(), String::new(), String::new())
+        );
+    }
+
+    fn check_fixture_config(config: Config) {
+        // Topic
+        let topic = config.topic.get("rust").unwrap();
+        assert_eq!(
+            topic.get_question(),
+            "What's going on interesting in the Rust world the past day?"
+        );
+        assert_eq!(topic.get_feeds(), ["Reddit Rust", "This Week in Rust"]);
+        assert_eq!(
+            topic.get_interval().unwrap(),
+            Duration::from_secs(7 * 24 * 60 * 60)
+        );
+        assert_eq!(config.topic.len(), 1);
+
+        // Claude
+        assert_eq!(config.claude.get_model(), "claude-haiku-4-5");
+        assert_eq!(config.claude.get_key(), "sk-key");
+
+        // Miniflux
+        let (url, username, password) = config.miniflux.get_all();
+        assert_eq!(url, "https://localhost");
+        assert_eq!(username, "admin");
+        assert_eq!(password, "password");
     }
 }

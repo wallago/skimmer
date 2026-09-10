@@ -1,0 +1,33 @@
+[
+  {
+    "id": 42,
+    "user_id": 1,
+    "feed_id": 7,
+    "title": "Rust 2.0",
+    "url": "https://example.com/rust-2",
+    "author": "someone",
+    "content": "Tom & Jerry <script>alert(1)</script>",
+    "hash": "abc",
+    "published_at": "2026-09-02T06:52:27Z",
+    "created_at": "2026-09-02T06:52:27Z",
+    "status": "unread",
+    "starred": false,
+    "reading_time": 3,
+    "feed": {
+      "id": 7,
+      "user_id": 1,
+      "title": "This Week in Rust",
+      "site_url": "https://this-week-in-rust.org",
+      "feed_url": "https://this-week-in-rust.org/rss.xml",
+      "rewrite_rules": "",
+      "scraper_rules": "",
+      "crawler": false,
+      "checked_at": "2026-09-02T06:52:27Z",
+      "etag_header": "",
+      "last_modified_header": "",
+      "parsing_error_count": 0,
+      "parsing_error_message": "",
+      "category": { "id": 1, "user_id": 1, "title": "rust" }
+    }
+  }
+]

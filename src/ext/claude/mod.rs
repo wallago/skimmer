@@ -76,3 +76,68 @@ impl Claude {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use std::path::Path;
+
+    use rstest::rstest;
+
+    use super::*;
+    use crate::config::Config;
+
+    /// A config file that matches [`Config`].
+    const FIXTURE: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/tests/fixtures/config.toml");
+
+    impl Claude {
+        /// Setting Claude model.
+        pub(crate) fn set_model(&mut self, model: &str) -> Option<()> {
+            match model {
+                "claude-haiku-4-5" | "claude-sonnet-5" | "claude-opus-5" => {
+                    self.model = model.to_string();
+                    Some(())
+                }
+                _ => None,
+            }
+        }
+    }
+
+    #[test]
+    fn get_claude_model() {
+        let config = Config::from_file(Path::new(FIXTURE)).unwrap();
+        let claude = Claude::new(&config.claude);
+        assert_eq!(claude.get_model(), "claude-haiku-4-5");
+    }
+
+    #[test]
+    fn set_claude_model() {
+        let config = Config::from_file(Path::new(FIXTURE)).unwrap();
+        let mut claude = Claude::new(&config.claude);
+        assert_eq!(claude.set_model("claude-test"), None);
+        assert_eq!(claude.set_model("claude-opus-5"), Some(()));
+    }
+
+    #[rstest]
+    #[case("claude-haiku-4-5", Some((1.0, 5.0)))]
+    #[case("claude-sonnet-5", Some((2.0, 10.0)))]
+    #[case("claude-opus-5", Some((5.0, 25.0)))]
+    #[case("claude-not-exist", Some((1.0, 5.0)))]
+    fn get_claude_rates_model(#[case] model: &str, #[case] expected: Option<(f64, f64)>) {
+        let config = Config::from_file(Path::new(FIXTURE)).unwrap();
+        let mut claude = Claude::new(&config.claude);
+        claude.set_model(model);
+        assert_eq!(claude.rates(), expected);
+    }
+
+    #[rstest]
+    #[case("claude-haiku-4-5", 1600)]
+    #[case("claude-sonnet-5", 1600)]
+    #[case("claude-opus-5", 1600)]
+    #[case("claude-not-exist", 1600)]
+    fn calculate_claude_cost(#[case] model: &str, #[case] token: u32) {
+        let config = Config::from_file(Path::new(FIXTURE)).unwrap();
+        let mut claude = Claude::new(&config.claude);
+        claude.set_model(model);
+        claude.calculate_cost(token);
+    }
+}
