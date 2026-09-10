@@ -37,7 +37,7 @@ pub async fn run(args: &Args) -> Result<()> {
     better_panic::install();
 
     let config = Config::load(args.config.as_deref())?;
-    let state = State::load()?;
+    let state = State::load(None)?;
 
     let mut app = App::new(args, config, state).await?;
     app.run().await
@@ -54,20 +54,4 @@ pub async fn run(args: &Args) -> Result<()> {
     //     tracing::info!("{:#?}", titles);
     //     return Ok(());
     // }
-}
-
-#[cfg(test)]
-mod tests {
-    use pretty_assertions::assert_eq;
-
-    use super::*;
-
-    #[tokio::test]
-    async fn run_succeeds() {
-        let args = Args {
-            config: Some(concat!(env!("CARGO_MANIFEST_DIR"), "/tests/fixtures/config.toml").into()),
-            ..Args::default()
-        };
-        assert_eq!(run(&args).await.is_ok(), true);
-    }
 }

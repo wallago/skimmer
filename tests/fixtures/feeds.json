@@ -1,0 +1,51 @@
+[
+  {
+    "id": 7,
+    "user_id": 1,
+    "title": "This Week in Rust",
+    "site_url": "https://this-week-in-rust.org",
+    "feed_url": "https://this-week-in-rust.org/rss.xml",
+    "rewrite_rules": "",
+    "scraper_rules": "",
+    "crawler": false,
+    "checked_at": "2026-09-02T06:52:27Z",
+    "etag_header": "",
+    "last_modified_header": "",
+    "parsing_error_count": 0,
+    "parsing_error_message": "",
+    "category": { "id": 1, "user_id": 1, "title": "rust" }
+  },
+  {
+    "id": 8,
+    "user_id": 1,
+    "title": "Reddit Rust",
+    "site_url": "https://www.reddit.com/r/rust",
+    "feed_url": "https://www.reddit.com/r/rust/.rss",
+    "rewrite_rules": "",
+    "scraper_rules": "",
+    "crawler": false,
+    "checked_at": "2026-09-02T06:50:11Z",
+    "etag_header": "\"deadbeef\"",
+    "last_modified_header": "Wed, 02 Sep 2026 06:50:11 GMT",
+    "parsing_error_count": 0,
+    "parsing_error_message": "",
+    "category": { "id": 1, "user_id": 1, "title": "rust" },
+    "icon": { "feed_id": 8, "icon_id": 3 }
+  },
+  {
+    "id": 9,
+    "user_id": 1,
+    "title": "Youtube Vimjoyer",
+    "site_url": "https://www.youtube.com/@vimjoyer",
+    "feed_url": "https://www.youtube.com/feeds/videos.xml?channel_id=UC-1",
+    "rewrite_rules": "",
+    "scraper_rules": "",
+    "crawler": false,
+    "checked_at": "2026-09-02T06:48:02Z",
+    "etag_header": "",
+    "last_modified_header": "",
+    "parsing_error_count": 2,
+    "parsing_error_message": "unable to fetch feed",
+    "category": { "id": 2, "user_id": 1, "title": "youtube" }
+  }
+]

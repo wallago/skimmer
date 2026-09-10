@@ -128,3 +128,67 @@ impl Claude {
         Ok(serde_json::from_str::<CountResp>(&body)?.input_tokens)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use reqwest::Response;
+
+    use super::*;
+
+    /// A briefing response.
+    const MESSAGE: &str = r#"{
+      "model": "claude-opus-5",
+      "id": "msg_01abc",
+      "type": "message",
+      "role": "assistant",
+      "content": [
+        {"type": "thinking", "thinking": ""},
+        {"type": "text", "text": "{\"digest\":\"A quiet day.\",\"highlights\":[{\"headline\":\"Rust 2.0\",\"detail\":\"Not really.\",\"entry_ids\":[42]}]}"}
+      ],
+      "stop_reason": "end_turn",
+      "stop_sequence": null,
+      "stop_details": null,
+      "usage": {"input_tokens": 1200, "output_tokens": 350}
+    }"#;
+
+    fn response(status: u16, body: &str) -> Response {
+        Response::from(
+            http::Response::builder()
+                .status(status)
+                .body(body.to_owned())
+                .unwrap(),
+        )
+    }
+
+    #[tokio::test]
+    async fn reads_analysis_from_first_text_block() {
+        let analysis = Claude::analyse_response(response(200, MESSAGE))
+            .await
+            .unwrap();
+        assert_eq!(analysis.get_digest(), "A quiet day.");
+        assert_eq!(analysis.get_highlights()[0].get_entry_ids(), [42]);
+    }
+
+    #[tokio::test]
+    async fn rejects_error_status() {
+        let err = Claude::analyse_response(response(429, r#"{"error":"slow down"}"#)).await;
+        assert!(err.is_err());
+    }
+
+    #[tokio::test]
+    async fn rejects_response_without_text_block() {
+        let body = r#"{"model":"m","id":"msg_1","type":"message","role":"assistant",
+            "content":[{"type":"thinking","thinking":""}],"stop_reason":"max_tokens",
+            "stop_sequence":null,"stop_details":null,
+            "usage":{"input_tokens":1,"output_tokens":2}}"#;
+        assert!(Claude::analyse_response(response(200, body)).await.is_err());
+    }
+
+    #[tokio::test]
+    async fn reads_token_count() {
+        let count = Claude::analyse_token_response(response(200, r#"{"input_tokens":123}"#))
+            .await
+            .unwrap();
+        assert_eq!(count, 123);
+    }
+}

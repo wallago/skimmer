@@ -42,6 +42,9 @@ pub enum Error {
     /// Error may occur while date parsing toml.
     #[error("Toml date parsing error: `{0}`")]
     TomlDateParsing(#[from] DatetimeParseError),
+    /// Error may occur by founding output directory.
+    #[error("Output directory not found")]
+    OutputNotExist,
 }
 
 /// Type alias for the standard [`Result`] type.

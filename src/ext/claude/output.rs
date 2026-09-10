@@ -3,7 +3,7 @@
 use serde::Deserialize;
 
 /// One thing worth knowing, pulled out of the entries.
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, PartialEq)]
 pub(crate) struct Highlight {
     /// One line, the claim itself.
     headline: String,
@@ -82,4 +82,46 @@ pub(super) fn briefing_schema() -> serde_json::Value {
         "required": ["digest", "highlights"],
         "additionalProperties": false
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use serde_json::json;
+
+    use super::*;
+
+    /// The analysis Claude is asked to produce, as it arrives — a JSON string
+    /// inside the response's text block.
+    const ANALYSIS: &str = r#"{
+      "digest": "A quiet day.",
+      "highlights": [
+        {"headline": "Rust 2.0", "detail": "Not really.", "entry_ids": [42]}
+      ]
+    }"#;
+
+    #[test]
+    fn get_claude_output() {
+        let analysis = serde_json::from_str::<Analysis>(ANALYSIS).unwrap();
+        assert_eq!(
+            analysis.get_highlights(),
+            vec![Highlight {
+                headline: "Rust 2.0".to_string(),
+                detail: "Not really.".to_string(),
+                entry_ids: vec![42],
+            }]
+        );
+        assert_eq!(analysis.get_digest(), "A quiet day.");
+        let highlight = analysis.get_highlights().first().unwrap();
+        assert_eq!(highlight.get_entry_ids(), [42]);
+        assert_eq!(highlight.get_headline(), "Rust 2.0");
+        assert_eq!(highlight.get_detail(), "Not really.");
+    }
+
+    #[test]
+    fn validate_briefing_shema() {
+        let validator = jsonschema::validator_for(&briefing_schema()).unwrap();
+        assert!(validator.is_valid(&serde_json::from_str(ANALYSIS).unwrap()));
+        assert!(!validator.is_valid(&json!({"digest": "d"})));
+        assert!(!validator.is_valid(&json!({"digest": "d", "highlights": [], "extra": 1})));
+    }
 }
