@@ -1,7 +1,6 @@
 //! The markdown report: one section per topic, written to a file.
 
 use std::io::Write as WriteIO;
-use std::str::FromStr;
 use std::{fs::File, path::PathBuf};
 
 use chrono::Utc;
@@ -24,8 +23,7 @@ pub(crate) struct Report {
 
 impl Report {
     /// An empty report.
-    pub(crate) fn new(output_dir: &str) -> Result<Self> {
-        let output_dir = PathBuf::from_str(output_dir).map_err(|_| Error::OutputNotExist)?;
+    pub(crate) fn new(output_dir: PathBuf) -> Result<Self> {
         if !output_dir.exists() {
             return Err(Error::OutputNotExist);
         }
