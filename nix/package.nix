@@ -11,6 +11,7 @@ naersk'.buildPackage {
 
   meta = {
     description = desc;
+    mainProgram = name;
     license = with lib.licenses; [
       asl20
       mit

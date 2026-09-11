@@ -43,7 +43,7 @@ impl App {
         let rss = Rss::new(url, username, password).await?;
         let claude = Claude::new(&config.claude);
         let topics = Topic::new(&config.topic, args.since, &state, &rss)?;
-        let report = Report::new(&config.output)?;
+        let report = Report::new(config.output)?;
         Ok(Self {
             state,
             rss,

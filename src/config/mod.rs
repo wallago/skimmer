@@ -1,6 +1,9 @@
 //! Config file setup.
 
-use std::{collections::HashMap, path::Path};
+use std::{
+    collections::HashMap,
+    path::{Path, PathBuf},
+};
 
 use claude::Claude;
 use miniflux::Miniflux;
@@ -36,7 +39,7 @@ pub struct Config {
     /// The topics to brief on, one `[topic.x]` each.
     pub topic: HashMap<String, Topic>,
     /// Output dir.
-    pub output: String,
+    pub output: PathBuf,
 }
 
 impl Config {
@@ -68,8 +71,11 @@ impl Config {
         // Get raw content
         let raw = std::fs::read_to_string(path)
             .map_err(|error| Error::Config(format!("{}: {error}", path.display())))?;
-        // Deserialize content in TOML format
-        toml::from_str(&raw).map_err(|error| Error::Config(format!("{}: {error}", path.display())))
+        let mut config: Self = toml::from_str(&raw)
+            .map_err(|error| Error::Config(format!("{}: {error}", path.display())))?;
+        config.claude.resolve()?;
+        config.miniflux.resolve()?;
+        Ok(config)
     }
 }
 
