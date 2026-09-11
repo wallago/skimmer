@@ -1,6 +1,10 @@
 //! Miniflux connection settings.
 
+use std::path::PathBuf;
+
 use serde::Deserialize;
+
+use crate::prelude::*;
 
 /// The `[miniflux]` table: where the feeds come from.
 #[derive(Clone, Debug, Default, Deserialize)]
@@ -11,6 +15,8 @@ pub struct Miniflux {
     username: String,
     /// That account's password.
     password: String,
+    /// File holding the password, e.g. a sops-nix secret path.
+    password_file: Option<PathBuf>,
 }
 
 impl Miniflux {
@@ -18,6 +24,18 @@ impl Miniflux {
     #[must_use]
     pub fn get_all(self) -> (String, String, String) {
         (self.url, self.username, self.password)
+    }
+
+    /// Replaces `password` with the contents of `password_file`, if set.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the file cannot be read.
+    pub(super) fn resolve(&mut self) -> Result<()> {
+        if let Some(path) = self.password_file.take() {
+            self.password = read_secret(&path)?;
+        }
+        Ok(())
     }
 }
 
