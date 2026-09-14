@@ -89,6 +89,7 @@
               git-cliff
               taplo
               editorconfig-checker
+              lychee
 
               # nix tooling
               nixfmt
@@ -111,6 +112,8 @@
 
             # ── Dev Shell (nix develop) ──────────────────────────────
             devShells.default = pkgs.mkShell {
+              PROJECT_NAME = "skimmer";
+              PROJECT_COLOR = "a6e3a1";
               buildInputs =
                 ciTools
                 ++ (with pkgs; [

@@ -42,7 +42,7 @@ pub async fn run(args: &Args) -> Result<()> {
     let mut app = App::new(args, config, state).await?;
     app.run().await
 
-    // TODO => Descide if keeping as aid
+    // TODO => Descid if keeping as aid
     // Debug related
     // if args.feeds {
     //     let titles = rss

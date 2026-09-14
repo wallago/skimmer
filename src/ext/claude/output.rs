@@ -118,7 +118,7 @@ mod tests {
     }
 
     #[test]
-    fn validate_briefing_shema() {
+    fn validate_briefing_schema() {
         let validator = jsonschema::validator_for(&briefing_schema()).unwrap();
         assert!(validator.is_valid(&serde_json::from_str(ANALYSIS).unwrap()));
         assert!(!validator.is_valid(&json!({"digest": "d"})));
