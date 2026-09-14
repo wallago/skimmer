@@ -13,7 +13,8 @@ pub struct Miniflux {
     url: String,
     /// Account to read feeds as.
     username: String,
-    /// That account's password.
+    /// That account's password. Optional when `password_file` is set.
+    #[serde(default)]
     password: String,
     /// File holding the password, e.g. a sops-nix secret path.
     password_file: Option<PathBuf>,
@@ -34,6 +35,11 @@ impl Miniflux {
     pub(super) fn resolve(&mut self) -> Result<()> {
         if let Some(path) = self.password_file.take() {
             self.password = read_secret(&path)?;
+        }
+        if self.password.is_empty() {
+            return Err(Error::Config(
+                "miniflux: set either `password` or `password_file`".to_owned(),
+            ));
         }
         Ok(())
     }
@@ -56,5 +62,28 @@ mod tests {
             )
             .is_err()
         );
+    }
+
+    #[test]
+    fn should_accept_password_file_instead_of_password() {
+        let mut miniflux: Miniflux = toml::from_str(&format!(
+            "
+            password_file = \"{}/tests/fixtures/secret\"
+            username = \"admin\"
+            url = \"test\"
+            ",
+            env!("CARGO_MANIFEST_DIR")
+        ))
+        .unwrap();
+        miniflux.resolve().unwrap();
+        let (_, _, password) = miniflux.get_all();
+        assert_eq!(password, "sk-file-key");
+    }
+
+    #[test]
+    fn should_reject_missing_password_and_file() {
+        let mut miniflux: Miniflux =
+            toml::from_str("username = \"admin\"\nurl = \"test\"").unwrap();
+        assert!(miniflux.resolve().is_err());
     }
 }

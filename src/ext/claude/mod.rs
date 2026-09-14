@@ -36,7 +36,7 @@ pub(crate) struct Claude {
 }
 
 impl Claude {
-    /// Setting up Claude environement.
+    /// Setting up Claude environment.
     pub(crate) fn new(config: &config::prelude::Claude) -> Self {
         Self {
             key: config.get_key().to_owned(),
