@@ -1,20 +1,69 @@
 //! Miniflux, the feed source.
 
-use miniflux_api::{
-    MinifluxApi,
-    models::{Entry, Feed},
-};
-use reqwest::Client;
+use reqwest::{Client, StatusCode};
+use serde::Deserialize;
 use url::Url;
 
 use crate::prelude::*;
 
+/// A feed on the Miniflux server. Only the fields we read are modelled; the
+/// server sends many more and serde drops them.
+#[derive(Clone, Debug, Deserialize)]
+pub(crate) struct Feed {
+    /// Miniflux' feed id, used to ask for the feed's entries.
+    pub(crate) id: i64,
+    /// Display title, what topics match against.
+    pub(crate) title: String,
+}
+
+/// An entry, as nested inside [`Entry`]. Only the title is used.
+#[derive(Clone, Debug, Deserialize)]
+pub(crate) struct EntryFeed {
+    /// Title of the feed the entry came from.
+    pub(crate) title: String,
+}
+
+/// An entry on the Miniflux server.
+#[derive(Clone, Debug, Deserialize)]
+pub(crate) struct Entry {
+    /// Miniflux' entry id, what Claude cites highlights with.
+    pub(crate) id: i64,
+    /// Headline.
+    pub(crate) title: String,
+    /// Body, as HTML.
+    pub(crate) content: String,
+    /// Link back to the article, cited in the report.
+    pub(crate) url: String,
+    /// RFC 3339 timestamp, passed through to the prompt as-is.
+    pub(crate) published_at: String,
+    /// The feed it came from.
+    pub(crate) feed: EntryFeed,
+}
+
+/// The envelope `/v1/feeds/{id}/entries` wraps its entries in.
+#[derive(Deserialize)]
+struct EntryBatch {
+    /// The entries themselves; `total` is ignored.
+    entries: Vec<Entry>,
+}
+
+/// The shape Miniflux reports errors in.
+#[derive(Deserialize)]
+struct MinifluxError {
+    /// Human-readable reason.
+    error_message: String,
+}
+
 /// A connection to Miniflux, with the feed list fetched once at startup.
 pub(crate) struct Rss {
-    /// Miniflux API bindings.
-    miniflux: MinifluxApi,
+    /// Base url of the Miniflux instance.
+    base: Url,
     /// HTTP client, reused across requests.
     client: Client,
+    /// Username, sent as HTTP basic auth on every request.
+    username: String,
+    /// Password, sent as HTTP basic auth on every request.
+    password: String,
     /// Every feed on the server, fetched in [`new`](Rss::new).
     feeds: Vec<Feed>,
 }
@@ -27,14 +76,47 @@ impl Rss {
     /// Returns an [`Error`] if the server is unreachable or rejects the
     /// credentials.
     pub(crate) async fn new(url: Url, username: String, password: String) -> Result<Self> {
-        let miniflux = MinifluxApi::new(&url, username, password);
-        let client = Client::new();
-        let feeds = miniflux.get_feeds(&client).await?;
-        Ok(Self {
-            miniflux,
-            client,
-            feeds,
-        })
+        let mut rss = Self {
+            base: url,
+            client: Client::new(),
+            username,
+            password,
+            feeds: Vec::new(),
+        };
+        rss.feeds = rss.get("v1/feeds", &[]).await?;
+        Ok(rss)
+    }
+
+    /// `GET`s `path` under the base url with `query` appended, authenticated
+    /// and deserialized.
+    ///
+    /// # Errors
+    ///
+    /// Returns an [`Error`] if the request fails or the server answers with
+    /// anything but `200 OK`.
+    async fn get<T: serde::de::DeserializeOwned>(
+        &self,
+        path: &str,
+        query: &[(&str, String)],
+    ) -> Result<T> {
+        let response = self
+            .client
+            .get(self.base.join(path)?)
+            .basic_auth(&self.username, Some(&self.password))
+            .query(query)
+            .send()
+            .await?;
+
+        let status = response.status();
+        let body = response.text().await?;
+        if status != StatusCode::OK {
+            // Miniflux reports the reason in the body, but not for every
+            // status; fall back to the code itself.
+            let message = serde_json::from_str::<MinifluxError>(&body)
+                .map_or_else(|_| status.to_string(), |e| e.error_message);
+            return Err(Error::MinifluxApi(message));
+        }
+        Ok(serde_json::from_str(&body)?)
     }
 
     /// Every feed on the server. Topics match against these by title.
@@ -48,31 +130,21 @@ impl Rss {
     ///
     /// Returns an [`Error`] if the request fails.
     pub(crate) async fn get_entries(&self, feed: i64, after: i64) -> Result<Vec<Entry>> {
-        Ok(self
-            .miniflux
-            .get_feed_entries(
-                feed,
-                None,
-                None,
-                Some(200),
-                None,
-                None,
-                None,
-                Some(after),
-                None,
-                None,
-                None,
-                &self.client,
+        let batch: EntryBatch = self
+            .get(
+                &format!("v1/feeds/{feed}/entries"),
+                &[("limit", "200".to_owned()), ("after", after.to_string())],
             )
-            .await?)
+            .await?;
+        Ok(batch.entries)
     }
 
     /// Lays entries out as XML-ish blocks for the prompt. The `id` attribute is
     /// what Claude cites highlights with.
     pub(crate) fn render_entries(entries: &[Entry]) -> String {
         entries.iter().map(|e| format!(
-        "<entry id=\"{}\" feed=\"{}\" published=\"{}\">\n<title>{}</title>\n<content>{}</content>\n</entry>",
-         e.id, e.feed.title, e.published_at, e.title, escape(&e.content),
+            "<entry id=\"{}\" feed=\"{}\" published=\"{}\">\n<title>{}</title>\n<content>{}</content>\n</entry>",
+            e.id, e.feed.title, e.published_at, e.title, escape(&e.content),
         )).collect::<Vec<_>>().join("\n")
     }
 }

@@ -3,7 +3,6 @@
 use std::collections::HashMap;
 
 use chrono::{DateTime, Utc};
-use miniflux_api::models::Feed;
 
 use crate::{
     ext::prelude::*,

@@ -4,7 +4,6 @@ use std::io::Write as WriteIO;
 use std::{fs::File, path::PathBuf};
 
 use chrono::Utc;
-use miniflux_api::models::Entry;
 
 use super::topic::Topic;
 use crate::{

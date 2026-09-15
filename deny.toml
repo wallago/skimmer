@@ -15,6 +15,9 @@ allow = [
   "BSL-1.0",
   "Zlib",
   "ISC",
+  # the Mozilla CA root bundle (webpki-root-certs) ships under a permissive
+  # data license; it puts no obligation on our code.
+  "CDLA-Permissive-2.0",
 ]
 
 [sources]

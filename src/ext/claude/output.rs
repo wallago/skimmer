@@ -93,10 +93,10 @@ mod tests {
     /// The analysis Claude is asked to produce, as it arrives — a JSON string
     /// inside the response's text block.
     const ANALYSIS: &str = r#"{
-      "digest": "A quiet day.",
-      "highlights": [
-        {"headline": "Rust 2.0", "detail": "Not really.", "entry_ids": [42]}
-      ]
+        "digest": "A quiet day.",
+        "highlights": [
+            {"headline": "Rust 2.0", "detail": "Not really.", "entry_ids": [42]}
+        ]
     }"#;
 
     #[test]

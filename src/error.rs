@@ -3,7 +3,7 @@
 use thiserror::Error as ThisError;
 use toml::value::DatetimeParseError;
 
-/// Errors that can occur while running [`run`].
+/// Errors that can occur while running [`crate::run`].
 #[derive(Debug, ThisError)]
 pub enum Error {
     /// Error that may occur during I/O operations.
@@ -26,7 +26,7 @@ pub enum Error {
     AnthropicApi(String),
     /// Error returned by the miniflux API.
     #[error("Miniflux API error: `{0}`")]
-    MinifluxApi(#[from] miniflux_api::ApiError),
+    MinifluxApi(String),
     /// Error may occur by founding state path.
     #[error("State path not found")]
     StatePath,
