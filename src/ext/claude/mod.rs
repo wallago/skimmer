@@ -53,7 +53,7 @@ impl Claude {
     /// USD per million tokens for the configured model, as `(input, output)`.
     ///
     /// [`None`] for a model this doesn't know the price of.
-    fn rates(&self) -> Option<(f64, f64)> {
+    pub(crate) fn rates(&self) -> Option<(f64, f64)> {
         match self.get_model() {
             "claude-haiku-4-5" => Some((1.0, 5.0)),
             "claude-sonnet-5" => Some((2.0, 10.0)),

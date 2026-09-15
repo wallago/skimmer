@@ -17,6 +17,14 @@ mod report;
 /// Render output.
 mod render;
 
+/// Token counts for one call.
+struct Tokens {
+    /// Tokens billed at the input rate.
+    input: u32,
+    /// Tokens billed at the output rate.
+    output: u32,
+}
+
 /// Everything a run needs, wired together once.
 pub(crate) struct App {
     /// File save.
@@ -55,20 +63,43 @@ impl App {
     /// Briefs every topic.
     pub(crate) async fn run(&mut self) -> Result<()> {
         let mut read: Vec<i64> = Vec::new();
+        let mut total_usage = Tokens {
+            input: 0,
+            output: 0,
+        };
         for (name, topic) in &self.topics {
             let (prompt, entries) = self.generate_prompt(topic).await?;
             let entry_ids = entries.iter().map(|entry| entry.id).collect::<Vec<i64>>();
-            read.extend(entry_ids);
+            read.extend(&entry_ids);
+            tracing::info!("\nEntries scanned: {}", entry_ids.len());
             if self.dry_run {
                 let tokens = self.claude.count_tokens(&prompt).await?;
                 self.claude.calculate_cost(tokens);
             } else {
-                let resp = self.claude.request_something(&prompt).await?;
+                let (resp, usage) = self.claude.request_something(&prompt).await?;
+                total_usage.input += usage.input_tokens;
+                total_usage.output += usage.output_tokens;
                 self.report.add(topic, &entries, resp);
                 self.state.set_last_run(name)?;
             }
         }
         if !self.dry_run {
+            tracing::info!("\nTotal entries scanned: {}", read.len());
+            if let Some((in_rate, out_rate)) = self.claude.rates() {
+                tracing::info!(
+                    "Claude token usage:\n • Input  => {} ({}$)\n • Output => {} ({}$)",
+                    total_usage.input,
+                    (f64::from(total_usage.input) * in_rate) / 1e6,
+                    total_usage.output,
+                    (f64::from(total_usage.output) * out_rate) / 1e6,
+                );
+            } else {
+                tracing::info!(
+                    "Total token usage:\n • Input  => {}\n • Output => {}",
+                    total_usage.input,
+                    total_usage.output,
+                );
+            }
             self.report.generate(&self.claude)?;
             self.state.save()?;
             self.rss.mark_as_read(&read).await?;

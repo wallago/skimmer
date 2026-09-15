@@ -51,12 +51,12 @@ impl Resp {
 }
 
 /// Token counts for one call.
-#[derive(Deserialize, Debug)]
-struct Usage {
+#[derive(Deserialize, Debug, PartialEq)]
+pub(crate) struct Usage {
     /// Tokens billed at the input rate.
-    input_tokens: u32,
+    pub input_tokens: u32,
     /// Tokens billed at the output rate.
-    output_tokens: u32,
+    pub output_tokens: u32,
 }
 
 /// One block of the response. Anything that is not text is folded into
@@ -90,7 +90,7 @@ impl Claude {
     ///
     /// Returns an [`Error`] if the status is not success, there is no text
     /// block, or the text does not match the briefing schema.
-    pub(super) async fn analyse_response(resp: Response) -> Result<Analysis> {
+    pub(super) async fn analyse_response(resp: Response) -> Result<(String, Analysis, Usage)> {
         let status = resp.status();
         let body = resp.text().await?;
         if !status.is_success() {
@@ -98,19 +98,13 @@ impl Claude {
         }
 
         let resp = serde_json::from_str::<Resp>(&body)?;
-        tracing::info!(
-            "Claude token usage for {}:\ninput  => {}\noutput => {}",
-            resp.id,
-            resp.usage.input_tokens,
-            resp.usage.output_tokens
-        );
         let text = resp
             .get_content()
             .first()
             .copied()
             .ok_or_else(|| Error::AnthropicApi(format!("no text block in response: {body}")))?;
         let analysis: Analysis = serde_json::from_str(text)?;
-        Ok(analysis)
+        Ok((resp.id, analysis, resp.usage))
     }
 
     /// Reads a token-count response.

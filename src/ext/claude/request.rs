@@ -6,6 +6,7 @@ use crate::{
     ext::claude::{
         Claude, SYSTEM,
         output::{Analysis, briefing_schema},
+        response::Usage,
     },
     prelude::Result,
 };
@@ -135,7 +136,7 @@ impl Claude {
     ///
     /// Returns an [`Error`] if the request fails, Claude refuses, or the
     /// response does not match [`Analysis`].
-    pub(crate) async fn request_something(&self, content: &str) -> Result<Analysis> {
+    pub(crate) async fn request_something(&self, content: &str) -> Result<(Analysis, Usage)> {
         let req = self.gen_req(content);
         let http = self
             .client
@@ -147,6 +148,26 @@ impl Claude {
             .send()
             .await?;
 
-        Self::analyse_response(http).await
+        let (id, analysis, usage) = Self::analyse_response(http).await?;
+
+        if let Some((in_rate, out_rate)) = self.rates() {
+            tracing::info!(
+                "Claude token usage for {}:\n • Input  => {} ({}$)\n • Output => {} ({}$)",
+                id,
+                usage.input_tokens,
+                (f64::from(usage.input_tokens) * in_rate) / 1e6,
+                usage.output_tokens,
+                (f64::from(usage.output_tokens) * out_rate) / 1e6,
+            );
+        } else {
+            tracing::info!(
+                "Claude token usage for {}:\n • Input  => {}\n • Output => {}",
+                id,
+                usage.input_tokens,
+                usage.output_tokens,
+            );
+        }
+
+        Ok((analysis, usage))
     }
 }
