@@ -54,8 +54,11 @@ impl App {
 
     /// Briefs every topic.
     pub(crate) async fn run(&mut self) -> Result<()> {
+        let mut read: Vec<i64> = Vec::new();
         for (name, topic) in &self.topics {
             let (prompt, entries) = self.generate_prompt(topic).await?;
+            let entry_ids = entries.iter().map(|entry| entry.id).collect::<Vec<i64>>();
+            read.extend(entry_ids);
             if self.dry_run {
                 let tokens = self.claude.count_tokens(&prompt).await?;
                 self.claude.calculate_cost(tokens);
@@ -68,6 +71,7 @@ impl App {
         if !self.dry_run {
             self.report.generate(&self.claude)?;
             self.state.save()?;
+            self.rss.mark_as_read(&read).await?;
         }
         Ok(())
     }

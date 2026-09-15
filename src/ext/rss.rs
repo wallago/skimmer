@@ -1,7 +1,7 @@
 //! Miniflux, the feed source.
 
 use reqwest::{Client, StatusCode};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use url::Url;
 
 use crate::prelude::*;
@@ -45,6 +45,15 @@ pub(crate) struct Entry {
 struct EntryBatch {
     /// The entries themselves; `total` is ignored.
     entries: Vec<Entry>,
+}
+
+/// The body of `PUT /v1/entries`.
+#[derive(Serialize)]
+struct EntryStatusUpdate<'a> {
+    /// Entries to update.
+    entry_ids: &'a [i64],
+    /// New status; always `"read"` here.
+    status: &'a str,
 }
 
 /// The shape Miniflux reports errors in.
@@ -107,16 +116,23 @@ impl Rss {
             .send()
             .await?;
 
+        let body = Self::body(response, StatusCode::OK).await?;
+        Ok(serde_json::from_str(&body)?)
+    }
+
+    /// Checks `response` against `expected`, handing back its body on success
+    /// and Miniflux' own error message otherwise.
+    async fn body(response: reqwest::Response, expected: StatusCode) -> Result<String> {
         let status = response.status();
         let body = response.text().await?;
-        if status != StatusCode::OK {
+        if status != expected {
             // Miniflux reports the reason in the body, but not for every
             // status; fall back to the code itself.
             let message = serde_json::from_str::<MinifluxError>(&body)
                 .map_or_else(|_| status.to_string(), |e| e.error_message);
             return Err(Error::MinifluxApi(message));
         }
-        Ok(serde_json::from_str(&body)?)
+        Ok(body)
     }
 
     /// Every feed on the server. Topics match against these by title.
@@ -137,6 +153,29 @@ impl Rss {
             )
             .await?;
         Ok(batch.entries)
+    }
+
+    /// Marks `entry_ids` as read on the server.
+    ///
+    /// # Errors
+    ///
+    /// Returns an [`Error`] if the request fails or Miniflux rejects it.
+    pub(crate) async fn mark_as_read(&self, entry_ids: &[i64]) -> Result<()> {
+        if entry_ids.is_empty() {
+            return Ok(());
+        }
+        let response = self
+            .client
+            .put(self.base.join("v1/entries")?)
+            .basic_auth(&self.username, Some(&self.password))
+            .json(&EntryStatusUpdate {
+                entry_ids,
+                status: "read",
+            })
+            .send()
+            .await?;
+        Self::body(response, StatusCode::NO_CONTENT).await?;
+        Ok(())
     }
 
     /// Lays entries out as XML-ish blocks for the prompt. The `id` attribute is
