@@ -137,18 +137,18 @@ mod tests {
 
     /// A briefing response.
     const MESSAGE: &str = r#"{
-      "model": "claude-opus-5",
-      "id": "msg_01abc",
-      "type": "message",
-      "role": "assistant",
-      "content": [
-        {"type": "thinking", "thinking": ""},
-        {"type": "text", "text": "{\"digest\":\"A quiet day.\",\"highlights\":[{\"headline\":\"Rust 2.0\",\"detail\":\"Not really.\",\"entry_ids\":[42]}]}"}
-      ],
-      "stop_reason": "end_turn",
-      "stop_sequence": null,
-      "stop_details": null,
-      "usage": {"input_tokens": 1200, "output_tokens": 350}
+        "model": "claude-opus-5",
+        "id": "msg_01abc",
+        "type": "message",
+        "role": "assistant",
+        "content": [
+            {"type": "thinking", "thinking": ""},
+            {"type": "text", "text": "{\"digest\":\"A quiet day.\",\"highlights\":[{\"headline\":\"Rust 2.0\",\"detail\":\"Not really.\",\"entry_ids\":[42]}]}"}
+        ],
+        "stop_reason": "end_turn",
+        "stop_sequence": null,
+        "stop_details": null,
+        "usage": {"input_tokens": 1200, "output_tokens": 350}
     }"#;
 
     fn response(status: u16, body: &str) -> Response {

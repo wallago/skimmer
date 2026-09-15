@@ -2,11 +2,9 @@
 
 use std::{collections::HashMap, str::FromStr};
 
-use miniflux_api::models::Entry;
-
 use crate::{
     app::{report::Report, topic::Topic},
-    ext::prelude::{Claude, Rss},
+    ext::prelude::{Claude, Entry, Rss},
     prelude::*,
 };
 

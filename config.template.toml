@@ -7,19 +7,17 @@ password = "password"
 api_key = "key"
 model   = "claude-opus-5"
 
-[[topic]]
-name       = "rust"
-question   = "What's going on interesting in the Rust world the past day?"
-feeds      = ["Reddit Rust", "This Week in Rust"]
-web_search = true
+[topic.rust]
+question = "What's going on interesting in the Rust world the past day?"
+feeds    = ["Reddit Rust", "This Week in Rust"]
+interval = "7d"
 
-[[topic]]
-name     = "youtube"
+[topic.youtube]
 question = "What's new for those video channel the past week?"
 feeds    = ["Youtube DevOps Toolbox", "Youtube Vimjoyer"]
+interval = "7d"
 
-[[topic]]
-name       = "bicycle"
+[topic.bicycle]
 question   = "What's new and interesting in the bicycle world the past day?"
 categories = ["cycling"]
-web_search = true                                                            # later
+interval   = "7d"
