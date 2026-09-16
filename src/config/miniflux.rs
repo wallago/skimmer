@@ -23,8 +23,8 @@ pub struct Miniflux {
 impl Miniflux {
     /// Consumes the config and hands back `(url, username, password)`.
     #[must_use]
-    pub fn get_all(self) -> (String, String, String) {
-        (self.url, self.username, self.password)
+    pub fn get_all(&self) -> (&str, &str, &str) {
+        (&self.url, &self.username, &self.password)
     }
 
     /// Replaces `password` with the contents of `password_file`, if set.

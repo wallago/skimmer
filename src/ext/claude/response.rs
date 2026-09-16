@@ -156,10 +156,10 @@ mod tests {
 
     #[tokio::test]
     async fn reads_analysis_from_first_text_block() {
-        let analysis = Claude::analyse_response(response(200, MESSAGE))
+        let (_, analysis, _) = Claude::analyse_response(response(200, MESSAGE))
             .await
             .unwrap();
-        assert_eq!(analysis.get_digest(), "A quiet day.");
+        assert_eq!(analysis.get_digest(), "A quiet day.",);
         assert_eq!(analysis.get_highlights()[0].get_entry_ids(), [42]);
     }
 

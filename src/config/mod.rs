@@ -40,6 +40,9 @@ pub struct Config {
     pub topic: HashMap<String, Topic>,
     /// Output dir.
     pub output: PathBuf,
+    /// Who the briefing is for, in prose. Fed to Claude as standing context so
+    /// it can rank entries instead of treating them all alike.
+    pub reader: String,
 }
 
 impl Config {
@@ -99,13 +102,13 @@ mod tests {
     #[test]
     fn load_config_from_file() {
         let config = Config::from_file(Path::new(FIXTURE)).unwrap();
-        check_fixture_config(config);
+        check_fixture_config(&config);
     }
 
     #[test]
     fn load_config_with_args() {
         let config = Config::load(Some(Path::new(FIXTURE))).unwrap();
-        check_fixture_config(config);
+        check_fixture_config(&config);
     }
 
     #[test]
@@ -133,13 +136,10 @@ mod tests {
         let config = Config::default();
         assert!(config.topic.is_empty());
         assert_eq!(config.claude.get_model(), "");
-        assert_eq!(
-            config.miniflux.get_all(),
-            (String::new(), String::new(), String::new())
-        );
+        assert_eq!(config.miniflux.get_all(), ("", "", ""));
     }
 
-    fn check_fixture_config(config: Config) {
+    fn check_fixture_config(config: &Config) {
         // Topic
         let topic = config.topic.get("rust").unwrap();
         assert_eq!(

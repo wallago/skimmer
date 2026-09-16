@@ -45,9 +45,9 @@ impl App {
     /// Connects to the RSS server and resolves the configured topics.
     pub(crate) async fn new(args: &Args, config: Config, state: State) -> Result<Self> {
         let (url_raw, username, password) = config.miniflux.get_all();
-        let url = url::Url::from_str(&url_raw)?;
+        let url = url::Url::from_str(url_raw)?;
         let rss = Rss::new(url, username, password).await?;
-        let claude = Claude::new(&config.claude);
+        let claude = Claude::new(&config);
         let topics = Topic::new(&config.topic, args.since, &state, &rss)?;
         let report = Report::new(config.output)?;
         Ok(Self {
@@ -105,7 +105,7 @@ impl App {
             }
             self.report.generate(&self.claude)?;
             self.state.save()?;
-            // self.rss.mark_as_read(&read).await?;
+            self.rss.mark_as_read(&read).await?;
         }
         Ok(())
     }
@@ -129,12 +129,21 @@ impl App {
             );
         }
 
+        let ask = if topic.get_context().trim().is_empty() {
+            topic.get_question().to_owned()
+        } else {
+            format!(
+                "{}\n\nWhat matters to the reader on this topic:\n{}",
+                topic.get_question(),
+                topic.get_context(),
+            )
+        };
+
         Ok((
             format!(
-                "Here are the entries published since {}:\n\n{}\n\n{}",
+                "Here are the entries published since {}:\n\n{}\n\n{ask}",
                 topic.get_last_run().to_rfc3339(),
                 Rss::render_entries(&entries),
-                topic.get_question(),
             ),
             entries,
         ))

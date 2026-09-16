@@ -127,11 +127,6 @@ p>\n",
         out.push_str("</ul>\n</details>\n</section>\n");
         out
     }
-
-    /// The question, escaped for the  document.
-    pub(super) fn title_html(&self) -> String {
-        escape(&self.question)
-    }
 }
 
 /// Escapes the characters that would otherwise break out of HTML text or a

@@ -1,3 +1,13 @@
+output = "/dev/null"
+
+reader = """
+Rust developer on NixOS, writing CLIs and TUIs. Self-hosts everything;
+runs Miniflux, Jellyfin, a Proxmox box. Rides road and gravel.
+Cares about: async Rust internals, terminal UX, Nix flakes, kernel and
+filesystem work, self-hosting ops.
+Already knows the basics — skip explainers, lead with what changed.
+"""
+
 [miniflux]
 url      = "http://0.0.0.0"
 username = "username"
@@ -10,6 +20,7 @@ model   = "claude-opus-5"
 [topic.rust]
 question = "What's going on interesting in the Rust world the past day?"
 feeds    = ["Reddit Rust", "This Week in Rust"]
+context  = "I care about async internals, TUI crates and build tooling. Show me crates I'd actually depend on, not weekend projects."
 interval = "7d"
 
 [topic.youtube]

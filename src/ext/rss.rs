@@ -84,12 +84,12 @@ impl Rss {
     ///
     /// Returns an [`Error`] if the server is unreachable or rejects the
     /// credentials.
-    pub(crate) async fn new(url: Url, username: String, password: String) -> Result<Self> {
+    pub(crate) async fn new(url: Url, username: &str, password: &str) -> Result<Self> {
         let mut rss = Self {
             base: url,
             client: Client::new(),
-            username,
-            password,
+            username: username.to_owned(),
+            password: password.to_owned(),
             feeds: Vec::new(),
         };
         rss.feeds = rss.get("v1/feeds", &[]).await?;
@@ -232,13 +232,9 @@ mod tests {
 
     /// Connects to `server`, which must answer `/v1/feeds`.
     async fn connect(server: &MockServer) -> Rss {
-        Rss::new(
-            Url::parse(&server.uri()).unwrap(),
-            "admin".into(),
-            "password".into(),
-        )
-        .await
-        .unwrap()
+        Rss::new(Url::parse(&server.uri()).unwrap(), "admin", "password")
+            .await
+            .unwrap()
     }
 
     #[test]
@@ -301,7 +297,7 @@ mod tests {
             .await;
 
         assert!(
-            Rss::new(Url::parse(&server.uri()).unwrap(), "a".into(), "b".into())
+            Rss::new(Url::parse(&server.uri()).unwrap(), "a", "b")
                 .await
                 .is_err()
         );

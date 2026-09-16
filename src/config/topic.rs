@@ -16,6 +16,9 @@ pub struct Topic {
     feeds: Vec<String>,
     /// How far back to look on a first run, as a duration like `"7d"`.
     interval: String,
+    /// What the reader wants out of this topic specifically. Optional.
+    #[serde(default)]
+    context: String,
 }
 
 impl Topic {
@@ -39,6 +42,12 @@ impl Topic {
     pub fn get_interval(&self) -> Result<Duration> {
         parse(&self.interval).map_err(Error::IntervalParsing)
     }
+
+    /// What the reader wants out of this topic. Empty when unset.
+    #[must_use]
+    pub fn get_context(&self) -> &str {
+        &self.context
+    }
 }
 
 #[cfg(test)]
@@ -47,15 +56,17 @@ mod tests {
 
     #[test]
     fn should_deserializes_toml_list() {
-        let modules: Topic =
-            toml::from_str("question = \"test ?\"\nfeeds = [\"test\"]\ninterval = \"23h\"")
-                .unwrap();
+        let modules: Topic = toml::from_str(
+            "question = \"test ?\"\ncontext = \"test\"\nfeeds = [\"test\"]\ninterval = \"23h\"",
+        )
+        .unwrap();
         assert_eq!(modules.question, "test ?");
+        assert_eq!(modules.context, "test");
         assert_eq!(modules.interval, "23h");
         assert_eq!(modules.feeds, ["test"].to_vec());
         assert!(
             toml::from_str::<Topic>(
-                "question = [\"test ?\"]\nfeeds = \"test\"\ninterval = [\"23h\"]",
+                "question = [\"test ?\"]\ncontext = [\"test\"]\nfeeds = \"test\"\ninterval = [\"23h\"]",
             )
             .is_err()
         );

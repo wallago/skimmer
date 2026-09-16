@@ -4,7 +4,7 @@ use serde::Serialize;
 
 use crate::{
     ext::claude::{
-        Claude, SYSTEM,
+        Claude,
         output::{Analysis, briefing_schema},
         response::Usage,
     },
@@ -75,11 +75,11 @@ struct Req<'a> {
 
 impl Claude {
     /// Builds the briefing request: system prompt, schema, token ceiling.
-    fn gen_req<'a>(&self, content: &'a str) -> Req<'a> {
+    fn gen_req<'a>(&'a self, content: &'a str) -> Req<'a> {
         Req {
             model: self.get_model().to_owned(),
             max_tokens: Some(16000),
-            system: Some(SYSTEM),
+            system: Some(&self.system),
             tools: Vec::new(),
             messages: vec![Msg {
                 role: "user",

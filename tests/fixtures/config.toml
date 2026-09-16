@@ -1,3 +1,8 @@
+output = "/dev/null"
+reader = """
+Reader stuff
+"""
+
 [miniflux]
 url      = "https://localhost"
 username = "admin"
@@ -11,3 +16,4 @@ model   = "claude-haiku-4-5"
 question = "What's going on interesting in the Rust world the past day?"
 feeds    = ["Reddit Rust", "This Week in Rust"]
 interval = "7d"
+context  = "I am very interesting in TUI app"

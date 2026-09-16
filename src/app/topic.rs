@@ -18,6 +18,8 @@ pub(crate) struct Topic {
     feeds: HashMap<String, Feed>,
     /// The question put to Claude.
     question: String,
+    /// What the reader wants out of this topic. Empty when unset.
+    context: String,
     /// The topic's name, as in the config and the state file.
     name: String,
 }
@@ -55,6 +57,7 @@ impl Topic {
                     last_run,
                     feeds: topic_feeds,
                     question: topic.get_question().to_string(),
+                    context: topic.get_context().to_string(),
                     name: name.to_owned(),
                 },
             );
@@ -80,5 +83,10 @@ impl Topic {
     /// The topic's name.
     pub(crate) fn get_name(&self) -> &str {
         &self.name
+    }
+
+    /// What the reader wants out of this topic. Empty when unset.
+    pub(crate) fn get_context(&self) -> &str {
+        &self.context
     }
 }

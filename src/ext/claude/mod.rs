@@ -13,8 +13,7 @@ pub(super) mod request;
 /// Response parsing.
 pub(super) mod response;
 
-/// Standing instructions: role, rules, output contract. Sent on every briefing
-/// request, not on token counting.
+/// The task, the rules, the output contract. The reader profile is appended.
 const SYSTEM: &str = "\
 You produce a short daily briefing from RSS entries.
 
@@ -33,15 +32,25 @@ pub(crate) struct Claude {
     client: Client,
     /// Model id.
     model: String,
+    /// `SYSTEM` plus the configured reader profile, built once.
+    system: String,
 }
 
 impl Claude {
     /// Setting up Claude environment.
-    pub(crate) fn new(config: &config::prelude::Claude) -> Self {
+    pub(crate) fn new(config: &config::Config) -> Self {
         Self {
-            key: config.get_key().to_owned(),
+            key: config.claude.get_key().to_owned(),
             client: Client::new(),
-            model: config.get_model().to_owned(),
+            model: config.claude.get_model().to_owned(),
+            system: if config.reader.trim().is_empty() {
+                SYSTEM.to_owned()
+            } else {
+                format!(
+                    "{SYSTEM}\n\nWho this briefing is for:\n{}\n\nRank by what matters to this reader. Say plainly when something is only marginally relevant to them.",
+                    config.reader
+                )
+            },
         }
     }
 
@@ -105,14 +114,14 @@ mod tests {
     #[test]
     fn get_claude_model() {
         let config = Config::from_file(Path::new(FIXTURE)).unwrap();
-        let claude = Claude::new(&config.claude);
+        let claude = Claude::new(&config);
         assert_eq!(claude.get_model(), "claude-haiku-4-5");
     }
 
     #[test]
     fn set_claude_model() {
         let config = Config::from_file(Path::new(FIXTURE)).unwrap();
-        let mut claude = Claude::new(&config.claude);
+        let mut claude = Claude::new(&config);
         assert_eq!(claude.set_model("claude-test"), None);
         assert_eq!(claude.set_model("claude-opus-5"), Some(()));
     }
@@ -124,7 +133,7 @@ mod tests {
     #[case("claude-not-exist", Some((1.0, 5.0)))]
     fn get_claude_rates_model(#[case] model: &str, #[case] expected: Option<(f64, f64)>) {
         let config = Config::from_file(Path::new(FIXTURE)).unwrap();
-        let mut claude = Claude::new(&config.claude);
+        let mut claude = Claude::new(&config);
         claude.set_model(model);
         assert_eq!(claude.rates(), expected);
     }
@@ -136,7 +145,7 @@ mod tests {
     #[case("claude-not-exist", 1600)]
     fn calculate_claude_cost(#[case] model: &str, #[case] token: u32) {
         let config = Config::from_file(Path::new(FIXTURE)).unwrap();
-        let mut claude = Claude::new(&config.claude);
+        let mut claude = Claude::new(&config);
         claude.set_model(model);
         claude.calculate_cost(token);
     }

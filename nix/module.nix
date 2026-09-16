@@ -39,6 +39,7 @@ in
       default = { };
       example = {
         output = "/home/wallago/sync-notes/skimmer/";
+        reader = "User description.";
         miniflux = {
           url = "http://localhost";
           user = "admin";
@@ -57,6 +58,7 @@ in
               "Reddit Rust"
               "This Week in Rust"
             ];
+            context = "What the user want to know";
             interval = "24h";
           };
         };
