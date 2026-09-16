@@ -71,7 +71,7 @@ flake-update:
 # Run the app. Usage: just run -- statement.csv bagels.db
 [group('dev')]
 run *ARGS:
-    cargo run -- {{ ARGS }}
+    cargo run -- -v --config config.dev.toml {{ ARGS }}
 
 # Build the optimized release binary
 [group('dev')]

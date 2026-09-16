@@ -69,6 +69,9 @@ impl App {
         };
         for (name, topic) in &self.topics {
             let (prompt, entries) = self.generate_prompt(topic).await?;
+            if entries.is_empty() {
+                continue;
+            }
             let entry_ids = entries.iter().map(|entry| entry.id).collect::<Vec<i64>>();
             read.extend(&entry_ids);
             tracing::info!("\nEntries scanned: {}", entry_ids.len());
@@ -102,7 +105,7 @@ impl App {
             }
             self.report.generate(&self.claude)?;
             self.state.save()?;
-            self.rss.mark_as_read(&read).await?;
+            // self.rss.mark_as_read(&read).await?;
         }
         Ok(())
     }
