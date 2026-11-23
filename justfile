@@ -1,3 +1,5 @@
+import 'just/server.just'
+
 # List all commands
 default:
     @just --list
