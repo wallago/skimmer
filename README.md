@@ -17,7 +17,7 @@ writes a single markdown report.
 4. **Ask** — entries are rendered as escaped `<entry id="…">` blocks and sent to the Messages
    API with a JSON schema, so the answer comes back as a digest plus cited highlights.
 5. **Write** — `report_<timestamp>.md` in `output`, one section per topic, with source links
-   back to each entry.
+   back to each entry. Each briefing is also saved, unread, to the `database`.
 6. **Record** — each briefed topic's `last_run` is stamped, so the next run picks up where this
    one stopped.
 
@@ -65,6 +65,7 @@ interval = "7d"
 | Key | Meaning |
 | --- | --- |
 | `output` | Directory the reports land in. Must already exist. |
+| `database` | Optional. SQLite file each briefing is also saved to, unread, for the web app. Defaults to `$XDG_STATE_HOME/skimmer/skimmer.db`. |
 | `miniflux.url` / `.username` | Server and the account to read feeds as. |
 | `miniflux.password` / `.password_file` | One of the two is required; the file wins and its trailing newline is trimmed. |
 | `claude.api_key` / `.api_key_file` | Same rule — one of the two is required. |

@@ -40,6 +40,8 @@ pub struct Config {
     pub topic: HashMap<String, Topic>,
     /// Output dir.
     pub output: PathBuf,
+    /// Briefings database. Defaults to `$XDG_STATE_HOME/skimmer/skimmer.db`.
+    pub database: Option<PathBuf>,
     /// Who the briefing is for, in prose. Fed to Claude as standing context so
     /// it can rank entries instead of treating them all alike.
     pub reader: String,

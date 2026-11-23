@@ -1,9 +1,9 @@
 //! What Claude sends back, and the schema that guarantees its shape.
 
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 /// One thing worth knowing, pulled out of the entries.
-#[derive(Deserialize, Debug, PartialEq)]
+#[derive(Deserialize, Serialize, Debug, PartialEq)]
 pub(crate) struct Highlight {
     /// One line, the claim itself.
     headline: String,

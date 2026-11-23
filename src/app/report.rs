@@ -7,13 +7,8 @@ use std::{fs::File, path::PathBuf};
 
 use chrono::{DateTime, Utc};
 
-use super::topic::Topic;
 use crate::app::render::escape;
-use crate::{
-    app::render::{Briefing, Source},
-    ext::prelude::{Claude, *},
-    prelude::*,
-};
+use crate::{app::render::Briefing, ext::prelude::Claude, prelude::*};
 
 /// The page around the briefings, with `{{placeholder}}` holes to fill.
 const TEMPLATE: &str = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/assets/report.html"));
@@ -68,24 +63,9 @@ impl Report {
         Ok(())
     }
 
-    /// Adds one topic's briefing, keeping the entries so highlights can link
-    /// back to them.
-    pub(crate) fn add(&mut self, topic: &Topic, entries: &[Entry], analysis: Analysis) {
-        self.briefings.push(Briefing {
-            question: topic.get_question().to_string(),
-            since: *topic.get_last_run(),
-            scanned: entries.len(),
-            analysis,
-            sources: entries
-                .iter()
-                .map(|e| Source {
-                    id: e.id,
-                    title: e.title.clone(),
-                    feed: e.feed.title.clone(),
-                    url: e.url.clone(),
-                })
-                .collect(),
-        });
+    /// Adds one topic's briefing.
+    pub(crate) fn add(&mut self, briefing: Briefing) {
+        self.briefings.push(briefing);
     }
 
     /// The whole report as one self-contained HTML page: no scripts, no fonts,
