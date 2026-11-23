@@ -9,7 +9,7 @@ repository   = "https://github.com/wallago/skimmer"
 keywords     = []
 categories   = []
 edition      = "2024"
-rust-version = "1.88"
+rust-version = "1.89"
 include      = ["assets/**/*", "src/**/*", "Cargo.*", "LICENSE*", "README.md", "CHANGELOG.md"]
 
 [dependencies]
@@ -24,6 +24,7 @@ clap = { version = "4.6.6", features = [
 dirs = "6.0.0"
 duration-str = "0.21.0"
 reqwest = { version = "0.13.4", features = ["query", "json"] }
+rusqlite = { version = "0.43", features = ["bundled", "chrono"] }
 serde = { version = "1.0.229", features = ["derive"] }
 serde_json = "1.0.151"
 thiserror = "2.0.19"
