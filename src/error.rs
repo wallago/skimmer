@@ -42,6 +42,9 @@ pub enum Error {
     /// Error may occur while date parsing toml.
     #[error("Toml date parsing error: `{0}`")]
     TomlDateParsing(#[from] DatetimeParseError),
+    /// Error that occur while reading or writing the briefings database.
+    #[error("Database error: `{0}`")]
+    Sqlite(#[from] rusqlite::Error),
     /// Error may occur by founding output directory.
     #[error("Output directory not found")]
     OutputNotExist,

@@ -3,7 +3,7 @@
 use std::{collections::HashMap, str::FromStr};
 
 use crate::{
-    app::{report::Report, topic::Topic},
+    app::{render::Briefing, report::Report, store::Store, topic::Topic},
     ext::prelude::{Claude, Entry, Rss},
     prelude::*,
 };
@@ -16,6 +16,9 @@ mod report;
 
 /// Render output.
 mod render;
+
+/// Briefings database.
+mod store;
 
 /// Token counts for one call.
 struct Tokens {
@@ -37,6 +40,8 @@ pub(crate) struct App {
     topics: HashMap<String, Topic>,
     /// Briefings collected so far.
     report: Report,
+    /// Where briefings are saved for the web app.
+    store: Store,
     /// Dry run to no token cost.
     dry_run: bool,
 }
@@ -50,12 +55,14 @@ impl App {
         let claude = Claude::new(&config);
         let topics = Topic::new(&config.topic, args.since, &state, &rss)?;
         let report = Report::new(config.output)?;
+        let store = Store::open(config.database)?;
         Ok(Self {
             state,
             rss,
             claude,
             topics,
             report,
+            store,
             dry_run: args.dry_run,
         })
     }
@@ -82,7 +89,9 @@ impl App {
                 let (resp, usage) = self.claude.request_something(&prompt).await?;
                 total_usage.input += usage.input_tokens;
                 total_usage.output += usage.output_tokens;
-                self.report.add(topic, &entries, resp);
+                let briefing = Briefing::new(topic, &entries, resp);
+                self.store.add(&briefing, self.claude.get_model())?;
+                self.report.add(briefing);
                 self.state.set_last_run(name)?;
             }
         }

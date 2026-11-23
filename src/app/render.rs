@@ -4,9 +4,13 @@ use std::fmt::Write as WriteFmt;
 
 use chrono::{DateTime, Utc};
 
-use crate::ext::prelude::Analysis;
+use serde::Serialize;
+
+use super::topic::Topic;
+use crate::ext::prelude::{Analysis, Entry};
 
 /// One entry as it appears in a report's source list.
+#[derive(Serialize)]
 pub(super) struct Source {
     /// Miniflux entry id, matched against `Highlight::entry_ids`.
     pub(super) id: i64,
@@ -20,6 +24,8 @@ pub(super) struct Source {
 
 /// One topic's section: what was asked, what Claude said, what it read.
 pub(crate) struct Briefing {
+    /// The topic's name, as in `[topic.<name>]`.
+    pub(super) topic: String,
     /// The question put to Claude.
     pub(super) question: String,
     /// Start of the window these entries came from.
@@ -33,6 +39,27 @@ pub(crate) struct Briefing {
 }
 
 impl Briefing {
+    /// One topic's briefing, keeping the entries so highlights can link back
+    /// to them.
+    pub(super) fn new(topic: &Topic, entries: &[Entry], analysis: Analysis) -> Self {
+        Self {
+            topic: topic.get_name().to_string(),
+            question: topic.get_question().to_string(),
+            since: *topic.get_last_run(),
+            scanned: entries.len(),
+            analysis,
+            sources: entries
+                .iter()
+                .map(|e| Source {
+                    id: e.id,
+                    title: e.title.clone(),
+                    feed: e.feed.title.clone(),
+                    url: e.url.clone(),
+                })
+                .collect(),
+        }
+    }
+
     /// Renders one topic as a markdown section.
     pub(super) fn render(&self) -> String {
         let mut out = format!(
