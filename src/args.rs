@@ -1,7 +1,7 @@
 //! Command-line arguments parser.
 
 use chrono::{DateTime, Utc};
-use clap::Parser;
+use clap::{Parser, Subcommand};
 
 /// Argument parser powered by [`clap`].
 #[derive(Clone, Debug, Default, Parser)]
@@ -39,6 +39,17 @@ pub struct Args {
     /// Build the prompt and print it without calling the API.
     #[arg(long, default_value_t = false)]
     pub dry_run: bool,
+
+    /// What to do. Without one, brief every topic once.
+    #[command(subcommand)]
+    pub command: Option<Command>,
+}
+
+/// Subcommands.
+#[derive(Clone, Debug, Subcommand)]
+pub enum Command {
+    /// Serve the saved briefings over HTTP until stopped.
+    Serve,
 }
 
 #[cfg(test)]

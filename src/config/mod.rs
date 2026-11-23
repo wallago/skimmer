@@ -21,6 +21,9 @@ mod miniflux;
 /// Per-topic settings.
 mod topic;
 
+/// Server settings.
+pub(crate) mod server;
+
 /// The config types, for modules that hold one.
 pub mod prelude {
     pub use super::claude::Claude;
@@ -42,6 +45,8 @@ pub struct Config {
     pub output: PathBuf,
     /// Briefings database. Defaults to `$XDG_STATE_HOME/skimmer/skimmer.db`.
     pub database: Option<PathBuf>,
+    /// Server config, for `skimmer serve`.
+    pub(crate) server: server::ServerConfig,
     /// Who the briefing is for, in prose. Fed to Claude as standing context so
     /// it can rank entries instead of treating them all alike.
     pub reader: String,

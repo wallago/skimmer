@@ -5,7 +5,8 @@ use std::path::PathBuf;
 
 use chrono::{Local, NaiveDate, Utc};
 use dirs::state_dir;
-use rusqlite::{Connection, params};
+use rusqlite::{Connection, OptionalExtension, Row, params};
+use serde::{Deserialize, Serialize};
 
 use crate::{app::render::Briefing, prelude::*};
 
@@ -29,6 +30,106 @@ create table briefings (
 );
 create index briefings_day on briefings (day);
 "];
+
+/// How far the reader got through a briefing.
+#[derive(Clone, Copy, Debug, Deserialize, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+pub(crate) enum Status {
+    /// Not opened yet.
+    Unread,
+    /// Opened, not read to the end.
+    Viewed,
+    /// Read to the end, or marked read.
+    Finished,
+}
+
+impl Status {
+    /// The value stored in `briefings.status`.
+    fn as_str(self) -> &'static str {
+        match self {
+            Self::Unread => "unread",
+            Self::Viewed => "viewed",
+            Self::Finished => "finished",
+        }
+    }
+}
+
+/// One day that has briefings, with how many are in each state.
+#[derive(Debug, Serialize, PartialEq, Eq)]
+pub(crate) struct DayCount {
+    /// Local date, `YYYY-MM-DD`.
+    pub(crate) day: String,
+    /// Not opened yet.
+    pub(crate) unread: i64,
+    /// Opened, not finished.
+    pub(crate) viewed: i64,
+    /// Finished.
+    pub(crate) finished: i64,
+}
+
+/// A briefing as saved, for the web app.
+#[derive(Debug, Serialize)]
+pub(crate) struct Saved {
+    /// Row id.
+    pub(crate) id: i64,
+    /// Topic name.
+    pub(crate) topic: String,
+    /// Local date, `YYYY-MM-DD`.
+    pub(crate) day: String,
+    /// The question put to Claude.
+    pub(crate) question: String,
+    /// Start of the window, RFC 3339.
+    pub(crate) since: String,
+    /// How many entries were scanned.
+    pub(crate) scanned: i64,
+    /// Claude's prose synthesis.
+    pub(crate) digest: String,
+    /// `[{headline, detail, entry_ids}]`.
+    pub(crate) highlights: serde_json::Value,
+    /// `[{id, title, feed, url}]`.
+    pub(crate) sources: serde_json::Value,
+    /// Model that wrote it.
+    pub(crate) model: String,
+    /// Read state.
+    pub(crate) status: Status,
+    /// When the read state last changed, RFC 3339.
+    pub(crate) updated_at: String,
+}
+
+impl Saved {
+    /// Reads one `select *`-shaped row.
+    fn from_row(row: &Row<'_>) -> rusqlite::Result<Self> {
+        let json = |index: usize| -> rusqlite::Result<serde_json::Value> {
+            let raw: String = row.get(index)?;
+            serde_json::from_str(&raw).map_err(|error| {
+                rusqlite::Error::FromSqlConversionFailure(
+                    index,
+                    rusqlite::types::Type::Text,
+                    Box::new(error),
+                )
+            })
+        };
+        let status: String = row.get("status")?;
+        Ok(Self {
+            id: row.get("id")?,
+            topic: row.get("topic")?,
+            day: row.get("day")?,
+            question: row.get("question")?,
+            since: row.get("since")?,
+            scanned: row.get("scanned")?,
+            digest: row.get("digest")?,
+            highlights: json(7)?,
+            sources: json(8)?,
+            model: row.get("model")?,
+            status: match status.as_str() {
+                "viewed" => Status::Viewed,
+                "finished" => Status::Finished,
+                _ => Status::Unread,
+            },
+            updated_at: row.get("updated_at")?,
+        })
+    }
+}
 
 /// The open database.
 pub(crate) struct Store {
@@ -58,6 +159,14 @@ impl Store {
         Self::migrate(Connection::open(path)?)
     }
 
+    /// An in-memory store holding one sample briefing on `day`, for tests.
+    #[cfg(test)]
+    pub(crate) fn sample(day: NaiveDate) -> Self {
+        let store = Self::migrate(Connection::open_in_memory().unwrap()).unwrap();
+        store.add_on(day, &tests::briefing(), "m").unwrap();
+        store
+    }
+
     /// Brings the schema up to date.
     fn migrate(conn: Connection) -> Result<Self> {
         let done: i64 = conn.pragma_query_value(None, "user_version", |row| row.get(0))?;
@@ -77,6 +186,63 @@ impl Store {
     /// Returns an [`Error`] if serializing or inserting fails.
     pub(crate) fn add(&self, briefing: &Briefing, model: &str) -> Result<()> {
         self.add_on(Local::now().date_naive(), briefing, model)
+    }
+
+    /// Every day with briefings, newest first.
+    ///
+    /// # Errors
+    ///
+    /// Returns an [`Error`] if the query fails.
+    pub(crate) fn days(&self) -> Result<Vec<DayCount>> {
+        let mut statement = self.conn.prepare(
+            "select day,
+                    count(*) filter (where status = 'unread'),
+                    count(*) filter (where status = 'viewed'),
+                    count(*) filter (where status = 'finished')
+             from briefings group by day order by day desc",
+        )?;
+        let days = statement.query_map([], |row| {
+            Ok(DayCount {
+                day: row.get(0)?,
+                unread: row.get(1)?,
+                viewed: row.get(2)?,
+                finished: row.get(3)?,
+            })
+        })?;
+        Ok(days.collect::<rusqlite::Result<_>>()?)
+    }
+
+    /// The briefings of one `day`, in the order they were saved.
+    ///
+    /// # Errors
+    ///
+    /// Returns an [`Error`] if the query fails.
+    pub(crate) fn on_day(&self, day: NaiveDate) -> Result<Vec<Saved>> {
+        let mut statement = self
+            .conn
+            .prepare("select * from briefings where day = ?1 order by id")?;
+        let saved = statement.query_map([day.to_string()], Saved::from_row)?;
+        Ok(saved.collect::<rusqlite::Result<_>>()?)
+    }
+
+    /// Sets a briefing's read state. [`None`] if there is no briefing `id`.
+    ///
+    /// # Errors
+    ///
+    /// Returns an [`Error`] if the update fails.
+    pub(crate) fn set_status(&self, id: i64, status: Status) -> Result<Option<Saved>> {
+        self.conn.execute(
+            "update briefings set status = ?2, updated_at = ?3 where id = ?1",
+            params![id, status.as_str(), Utc::now().to_rfc3339()],
+        )?;
+        Ok(self
+            .conn
+            .query_row(
+                "select * from briefings where id = ?1",
+                [id],
+                Saved::from_row,
+            )
+            .optional()?)
     }
 
     /// [`add`](Self::add), for a given `day`.
@@ -111,7 +277,7 @@ mod tests {
     use crate::app::render::Source;
 
     /// A briefing with one highlight citing its one source.
-    fn briefing() -> Briefing {
+    pub(super) fn briefing() -> Briefing {
         Briefing {
             topic: "rust".to_string(),
             question: "What's new?".to_string(),
@@ -129,6 +295,65 @@ mod tests {
             }],
             scanned: 1,
         }
+    }
+
+    /// A fresh in-memory store.
+    fn store() -> Store {
+        Store::migrate(Connection::open_in_memory().unwrap()).unwrap()
+    }
+
+    #[test]
+    fn days_count_each_state_newest_first() {
+        let store = store();
+        let monday = NaiveDate::from_ymd_opt(2026, 11, 23).unwrap();
+        let sunday = NaiveDate::from_ymd_opt(2026, 11, 22).unwrap();
+        for day in [sunday, monday, monday, monday] {
+            store.add_on(day, &briefing(), "m").unwrap();
+        }
+        store.set_status(2, Status::Viewed).unwrap();
+        store.set_status(3, Status::Finished).unwrap();
+        assert_eq!(
+            store.days().unwrap(),
+            vec![
+                DayCount {
+                    day: "2026-11-23".to_string(),
+                    unread: 1,
+                    viewed: 1,
+                    finished: 1
+                },
+                DayCount {
+                    day: "2026-11-22".to_string(),
+                    unread: 1,
+                    viewed: 0,
+                    finished: 0
+                },
+            ]
+        );
+    }
+
+    #[test]
+    fn on_day_reads_back_what_was_saved() {
+        let store = store();
+        let day = NaiveDate::from_ymd_opt(2026, 11, 23).unwrap();
+        store.add_on(day, &briefing(), "claude-haiku-5-5").unwrap();
+        let saved = store.on_day(day).unwrap();
+        assert_eq!(saved.len(), 1);
+        let first = &saved[0];
+        assert_eq!(first.topic, "rust");
+        assert_eq!(first.status, Status::Unread);
+        assert_eq!(first.highlights[0]["entry_ids"][0], 42);
+        assert_eq!(first.sources[0]["url"], "https://example.com/42");
+        assert!(store.on_day(day.succ_opt().unwrap()).unwrap().is_empty());
+    }
+
+    #[test]
+    fn set_status_answers_the_updated_briefing_or_none() {
+        let store = store();
+        let day = NaiveDate::from_ymd_opt(2026, 11, 23).unwrap();
+        store.add_on(day, &briefing(), "m").unwrap();
+        let saved = store.set_status(1, Status::Finished).unwrap().unwrap();
+        assert_eq!(saved.status, Status::Finished);
+        assert!(store.set_status(99, Status::Viewed).unwrap().is_none());
     }
 
     #[test]

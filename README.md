@@ -66,6 +66,7 @@ interval = "7d"
 | --- | --- |
 | `output` | Directory the reports land in. Must already exist. |
 | `database` | Optional. SQLite file each briefing is also saved to, unread, for the web app. Defaults to `$XDG_STATE_HOME/skimmer/skimmer.db`. |
+| `server.address` / `.port` | Where `skimmer serve` listens. Defaults to `127.0.0.1` and `3000`. |
 | `miniflux.url` / `.username` | Server and the account to read feeds as. |
 | `miniflux.password` / `.password_file` | One of the two is required; the file wins and its trailing newline is trimmed. |
 | `claude.api_key` / `.api_key_file` | Same rule — one of the two is required. |
@@ -83,7 +84,9 @@ Two caveats on the template: `output` is not in it but is required in practice, 
 ## Usage
 
 ```
-skimmer [OPTIONS]
+skimmer [OPTIONS] [COMMAND]
+
+  serve                Serve the saved briefings over HTTP until stopped
 
   -v, --verbose...     Increase logging verbosity (-v, -vv, -vvv)
       --config <PATH>  Path to the application config file (TOML)
@@ -96,6 +99,19 @@ skimmer [OPTIONS]
 `--dry-run` prices the prompt against a built-in rate table (haiku 4.5, sonnet 5, opus 5) and
 leaves both the report and the state file untouched. A `--feeds` flag is also accepted but is
 currently a no-op.
+
+### `skimmer serve`
+
+Serves the saved briefings from `database` for the web app, until Ctrl-C or SIGTERM:
+
+| Route | Answer |
+| --- | --- |
+| `GET /health` | `200` while the server is up |
+| `GET /api/days` | Every day with briefings, newest first: `[{day, unread, viewed, finished}]` |
+| `GET /api/days/{day}` | That day's briefings (`day` like `2026-11-23`), with digest, highlights, sources and `status` |
+| `PUT /api/briefings/{id}/status` | Body `{"status": "unread" \| "viewed" \| "finished"}`; answers the briefing, `404` if there is none |
+
+There is no login: keep it on `127.0.0.1`, or reach it over a VPN or a reverse proxy.
 
 Logs go to stderr — plain under journald, timestamped otherwise. Default level is warnings and
 errors; `-v` adds the per-topic progress.

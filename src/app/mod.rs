@@ -18,7 +18,7 @@ mod report;
 mod render;
 
 /// Briefings database.
-mod store;
+pub(crate) mod store;
 
 /// Token counts for one call.
 struct Tokens {
