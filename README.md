@@ -54,7 +54,7 @@ password = "…"                        # or password_file = "/run/secrets/minif
 
 [claude]
 api_key = "sk-ant-…"                  # or api_key_file = "/run/secrets/anthropic"
-model   = "claude-opus-5"
+model   = "claude-haiku-5-5"
 
 [topic.rust]
 question = "What's going on interesting in the Rust world the past day?"
@@ -68,7 +68,7 @@ interval = "7d"
 | `miniflux.url` / `.username` | Server and the account to read feeds as. |
 | `miniflux.password` / `.password_file` | One of the two is required; the file wins and its trailing newline is trimmed. |
 | `claude.api_key` / `.api_key_file` | Same rule — one of the two is required. |
-| `claude.model` | Model id, e.g. `claude-haiku-4-5`, `claude-sonnet-5`, `claude-opus-5`. |
+| `claude.model` | Model id, e.g. `claude-haiku-5-5`, `claude-sonnet-5-5`, `claude-opus-5-5`. |
 | `topic.<name>.question` | What Claude is asked about this topic's entries. |
 | `topic.<name>.feeds` | Feed-title substrings; a feed matches if its title contains one. |
 | `topic.<name>.interval` | How far back to look on a first run, e.g. `"24h"`, `"7d"`. |
@@ -123,7 +123,7 @@ config through `LoadCredential`, and runs it from a daily persistent timer:
         password_file = "/run/secrets/miniflux";
       };
       claude = {
-        model        = "claude-haiku-4-5";
+        model        = "claude-haiku-5-5";
         api_key_file = "/run/secrets/anthropic";
       };
       topic.rust = {
