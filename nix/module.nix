@@ -47,7 +47,7 @@ in
           password_file = "./to/password/file";
         };
         claude = {
-          model = "claude-haiku-4-5";
+          model = "claude-haiku-5-5";
           api_key = "sk-key";
           api_key_file = "./to/key/file";
         };

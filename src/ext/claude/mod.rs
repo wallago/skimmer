@@ -64,8 +64,10 @@ impl Claude {
     /// [`None`] for a model this doesn't know the price of.
     pub(crate) fn rates(&self) -> Option<(f64, f64)> {
         match self.get_model() {
+            "claude-haiku-5-5" => Some((0.1, 0.5)),
             "claude-haiku-4-5" => Some((1.0, 5.0)),
-            "claude-sonnet-5" => Some((2.0, 10.0)),
+            "claude-sonnet-5-5" | "claude-sonnet-5" => Some((2.0, 10.0)),
+            "claude-opus-5-5" => Some((4.0, 20.0)),
             "claude-opus-5" => Some((5.0, 25.0)),
             _ => None,
         }
@@ -102,7 +104,8 @@ mod tests {
         /// Setting Claude model.
         pub(crate) fn set_model(&mut self, model: &str) -> Option<()> {
             match model {
-                "claude-haiku-4-5" | "claude-sonnet-5" | "claude-opus-5" => {
+                "claude-haiku-5-5" | "claude-haiku-4-5" | "claude-sonnet-5-5"
+                | "claude-sonnet-5" | "claude-opus-5-5" | "claude-opus-5" => {
                     self.model = model.to_string();
                     Some(())
                 }
@@ -127,8 +130,11 @@ mod tests {
     }
 
     #[rstest]
+    #[case("claude-haiku-5-5", Some((0.1, 0.5)))]
     #[case("claude-haiku-4-5", Some((1.0, 5.0)))]
+    #[case("claude-sonnet-5-5", Some((2.0, 10.0)))]
     #[case("claude-sonnet-5", Some((2.0, 10.0)))]
+    #[case("claude-opus-5-5", Some((4.0, 20.0)))]
     #[case("claude-opus-5", Some((5.0, 25.0)))]
     #[case("claude-not-exist", Some((1.0, 5.0)))]
     fn get_claude_rates_model(#[case] model: &str, #[case] expected: Option<(f64, f64)>) {
