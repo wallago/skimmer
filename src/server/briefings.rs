@@ -132,7 +132,10 @@ mod tests {
         assert_eq!(status, StatusCode::OK);
         assert_eq!(
             body,
-            json!([{"day": "2026-11-23", "unread": 1, "viewed": 0, "finished": 0}])
+            json!([{
+                "day": "2026-11-23", "unread": 1, "viewed": 0, "finished": 0,
+                "input_tokens": 0, "output_tokens": 0, "cost_usd": null
+            }])
         );
     }
 

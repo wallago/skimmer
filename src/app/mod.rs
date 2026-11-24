@@ -3,7 +3,12 @@
 use std::{collections::HashMap, str::FromStr};
 
 use crate::{
-    app::{render::Briefing, report::Report, store::Store, topic::Topic},
+    app::{
+        render::Briefing,
+        report::Report,
+        store::{Spend, Store},
+        topic::Topic,
+    },
     ext::prelude::{Claude, Entry, Rss},
     prelude::*,
 };
@@ -90,7 +95,16 @@ impl App {
                 total_usage.input += usage.input_tokens;
                 total_usage.output += usage.output_tokens;
                 let briefing = Briefing::new(topic, &entries, resp);
-                self.store.add(&briefing, self.claude.get_model())?;
+                let spend = Spend {
+                    input_tokens: usage.input_tokens,
+                    output_tokens: usage.output_tokens,
+                    cost_usd: self.claude.rates().map(|(in_rate, out_rate)| {
+                        (f64::from(usage.input_tokens) * in_rate
+                            + f64::from(usage.output_tokens) * out_rate)
+                            / 1e6
+                    }),
+                };
+                self.store.add(&briefing, self.claude.get_model(), spend)?;
                 self.report.add(briefing);
                 self.state.set_last_run(name)?;
             }

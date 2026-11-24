@@ -107,7 +107,7 @@ Serves the saved briefings from `database` for the web app, until Ctrl-C or SIGT
 | Route | Answer |
 | --- | --- |
 | `GET /health` | `200` while the server is up |
-| `GET /api/days` | Every day with briefings, newest first: `[{day, unread, viewed, finished}]` |
+| `GET /api/days` | Every day with briefings, newest first: `[{day, unread, viewed, finished, input_tokens, output_tokens, cost_usd}]`. `cost_usd` is priced when each briefing is written, and is `null` for a model missing from the price table |
 | `GET /api/days/{day}` | That day's briefings (`day` like `2026-11-23`), with digest, highlights, sources and `status` |
 | `PUT /api/briefings/{id}/status` | Body `{"status": "unread" \| "viewed" \| "finished"}`; answers the briefing, `404` if there is none |
 
