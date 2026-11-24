@@ -11,7 +11,8 @@ use serde::{Deserialize, Serialize};
 use crate::{app::render::Briefing, prelude::*};
 
 /// Schema steps, applied in order. `PRAGMA user_version` records how many ran.
-const MIGRATIONS: &[&str] = &["
+const MIGRATIONS: &[&str] = &[
+    "
 create table briefings (
   id          integer primary key,
   topic       text not null,
@@ -29,7 +30,13 @@ create table briefings (
   updated_at  text not null
 );
 create index briefings_day on briefings (day);
-"];
+",
+    "
+alter table briefings add column input_tokens  integer not null default 0;
+alter table briefings add column output_tokens integer not null default 0;
+alter table briefings add column cost_usd      real;  -- null: model not in the price table
+",
+];
 
 /// How far the reader got through a briefing.
 #[derive(Clone, Copy, Debug, Deserialize, Serialize, PartialEq, Eq)]
@@ -54,8 +61,20 @@ impl Status {
     }
 }
 
-/// One day that has briefings, with how many are in each state.
-#[derive(Debug, Serialize, PartialEq, Eq)]
+/// What one Claude call used, and what it cost.
+#[derive(Clone, Copy, Debug, Default)]
+pub(crate) struct Spend {
+    /// Tokens billed at the input rate.
+    pub(crate) input_tokens: u32,
+    /// Tokens billed at the output rate.
+    pub(crate) output_tokens: u32,
+    /// USD, or [`None`] for a model without a known price.
+    pub(crate) cost_usd: Option<f64>,
+}
+
+/// One day that has briefings: how many are in each state, and what they
+/// cost to write.
+#[derive(Debug, Serialize, PartialEq)]
 pub(crate) struct DayCount {
     /// Local date, `YYYY-MM-DD`.
     pub(crate) day: String,
@@ -65,6 +84,12 @@ pub(crate) struct DayCount {
     pub(crate) viewed: i64,
     /// Finished.
     pub(crate) finished: i64,
+    /// Input tokens used that day.
+    pub(crate) input_tokens: i64,
+    /// Output tokens used that day.
+    pub(crate) output_tokens: i64,
+    /// USD spent that day, [`None`] if no briefing had a known price.
+    pub(crate) cost_usd: Option<f64>,
 }
 
 /// A briefing as saved, for the web app.
@@ -163,7 +188,9 @@ impl Store {
     #[cfg(test)]
     pub(crate) fn sample(day: NaiveDate) -> Self {
         let store = Self::migrate(Connection::open_in_memory().unwrap()).unwrap();
-        store.add_on(day, &tests::briefing(), "m").unwrap();
+        store
+            .add_on(day, &tests::briefing(), "m", Spend::default())
+            .unwrap();
         store
     }
 
@@ -184,8 +211,8 @@ impl Store {
     /// # Errors
     ///
     /// Returns an [`Error`] if serializing or inserting fails.
-    pub(crate) fn add(&self, briefing: &Briefing, model: &str) -> Result<()> {
-        self.add_on(Local::now().date_naive(), briefing, model)
+    pub(crate) fn add(&self, briefing: &Briefing, model: &str, spend: Spend) -> Result<()> {
+        self.add_on(Local::now().date_naive(), briefing, model, spend)
     }
 
     /// Every day with briefings, newest first.
@@ -198,7 +225,8 @@ impl Store {
             "select day,
                     count(*) filter (where status = 'unread'),
                     count(*) filter (where status = 'viewed'),
-                    count(*) filter (where status = 'finished')
+                    count(*) filter (where status = 'finished'),
+                    sum(input_tokens), sum(output_tokens), sum(cost_usd)
              from briefings group by day order by day desc",
         )?;
         let days = statement.query_map([], |row| {
@@ -207,6 +235,9 @@ impl Store {
                 unread: row.get(1)?,
                 viewed: row.get(2)?,
                 finished: row.get(3)?,
+                input_tokens: row.get(4)?,
+                output_tokens: row.get(5)?,
+                cost_usd: row.get(6)?,
             })
         })?;
         Ok(days.collect::<rusqlite::Result<_>>()?)
@@ -246,12 +277,13 @@ impl Store {
     }
 
     /// [`add`](Self::add), for a given `day`.
-    fn add_on(&self, day: NaiveDate, briefing: &Briefing, model: &str) -> Result<()> {
+    fn add_on(&self, day: NaiveDate, briefing: &Briefing, model: &str, spend: Spend) -> Result<()> {
         let now = Utc::now().to_rfc3339();
         self.conn.execute(
             "insert into briefings (topic, day, question, since, scanned, digest, highlights,
-                                    sources, model, created_at, updated_at)
-             values (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?10)",
+                                    sources, model, created_at, updated_at,
+                                    input_tokens, output_tokens, cost_usd)
+             values (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?10, ?11, ?12, ?13)",
             params![
                 briefing.topic,
                 day.to_string(),
@@ -263,6 +295,9 @@ impl Store {
                 serde_json::to_string(&briefing.sources)?,
                 model,
                 now,
+                spend.input_tokens,
+                spend.output_tokens,
+                spend.cost_usd,
             ],
         )?;
         Ok(())
@@ -303,12 +338,22 @@ mod tests {
     }
 
     #[test]
-    fn days_count_each_state_newest_first() {
+    fn days_count_each_state_and_sum_spend_newest_first() {
         let store = store();
         let monday = NaiveDate::from_ymd_opt(2026, 11, 23).unwrap();
         let sunday = NaiveDate::from_ymd_opt(2026, 11, 22).unwrap();
-        for day in [sunday, monday, monday, monday] {
-            store.add_on(day, &briefing(), "m").unwrap();
+        let priced = Spend {
+            input_tokens: 1000,
+            output_tokens: 200,
+            cost_usd: Some(0.25),
+        };
+        let unpriced = Spend {
+            cost_usd: None,
+            ..priced
+        };
+        store.add_on(sunday, &briefing(), "m", unpriced).unwrap();
+        for _ in 0..3 {
+            store.add_on(monday, &briefing(), "m", priced).unwrap();
         }
         store.set_status(2, Status::Viewed).unwrap();
         store.set_status(3, Status::Finished).unwrap();
@@ -319,13 +364,19 @@ mod tests {
                     day: "2026-11-23".to_string(),
                     unread: 1,
                     viewed: 1,
-                    finished: 1
+                    finished: 1,
+                    input_tokens: 3000,
+                    output_tokens: 600,
+                    cost_usd: Some(0.75),
                 },
                 DayCount {
                     day: "2026-11-22".to_string(),
                     unread: 1,
                     viewed: 0,
-                    finished: 0
+                    finished: 0,
+                    input_tokens: 1000,
+                    output_tokens: 200,
+                    cost_usd: None,
                 },
             ]
         );
@@ -335,7 +386,9 @@ mod tests {
     fn on_day_reads_back_what_was_saved() {
         let store = store();
         let day = NaiveDate::from_ymd_opt(2026, 11, 23).unwrap();
-        store.add_on(day, &briefing(), "claude-haiku-5-5").unwrap();
+        store
+            .add_on(day, &briefing(), "claude-haiku-5-5", Spend::default())
+            .unwrap();
         let saved = store.on_day(day).unwrap();
         assert_eq!(saved.len(), 1);
         let first = &saved[0];
@@ -350,7 +403,9 @@ mod tests {
     fn set_status_answers_the_updated_briefing_or_none() {
         let store = store();
         let day = NaiveDate::from_ymd_opt(2026, 11, 23).unwrap();
-        store.add_on(day, &briefing(), "m").unwrap();
+        store
+            .add_on(day, &briefing(), "m", Spend::default())
+            .unwrap();
         let saved = store.set_status(1, Status::Finished).unwrap().unwrap();
         assert_eq!(saved.status, Status::Finished);
         assert!(store.set_status(99, Status::Viewed).unwrap().is_none());
@@ -371,7 +426,9 @@ mod tests {
     fn add_saves_an_unread_briefing() {
         let store = Store::migrate(Connection::open_in_memory().unwrap()).unwrap();
         let day = NaiveDate::from_ymd_opt(2026, 11, 23).unwrap();
-        store.add_on(day, &briefing(), "claude-haiku-5-5").unwrap();
+        store
+            .add_on(day, &briefing(), "claude-haiku-5-5", Spend::default())
+            .unwrap();
 
         let row: (String, String, String, String, String, String) = store
             .conn
