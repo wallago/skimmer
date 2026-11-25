@@ -141,7 +141,9 @@ errors; `-v` adds the per-topic progress.
 ## Running it on a schedule
 
 The flake ships a NixOS module (`nixosModules.default`) that installs the binary, renders the
-config through `LoadCredential`, and runs it from a daily persistent timer:
+config through `LoadCredential`, and runs it from a persistent timer, every day at 07:00
+Europe/Paris unless `schedule` says otherwise. `serve = true` also runs `skimmer serve` as a
+service. Both units share `/var/lib/skimmer/skimmer.db`:
 
 ```nix
 {
@@ -152,8 +154,10 @@ config through `LoadCredential`, and runs it from a daily persistent timer:
   imports = [ inputs.skimmer.nixosModules.default ];
 
   services.skimmer = {
-    enable  = true;
-    verbose = 1;
+    enable   = true;
+    verbose  = 1;
+    schedule = "*-*-* 07:00:00 Europe/Paris"; # the default
+    serve    = true;
     settings = {
       output = "/var/lib/skimmer";
       miniflux = {
@@ -170,6 +174,7 @@ config through `LoadCredential`, and runs it from a daily persistent timer:
         feeds    = [ "Reddit Rust" "This Week in Rust" ];
         interval = "24h";
       };
+      web.dir = "/srv/skimmer-web"; # a copy of web/dist, from `just build` in web/
     };
   };
 }
