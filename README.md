@@ -67,6 +67,7 @@ interval = "7d"
 | `output` | Directory the reports land in. Must already exist. |
 | `database` | Optional. SQLite file each briefing is also saved to, unread, for the web app. Defaults to `$XDG_STATE_HOME/skimmer/skimmer.db`. |
 | `server.address` / `.port` | Where `skimmer serve` listens. Defaults to `127.0.0.1` and `3000`. |
+| `web.dir` | Optional. Built web app (`web/dist`) that `skimmer serve` serves at `/`. |
 | `miniflux.url` / `.username` | Server and the account to read feeds as. |
 | `miniflux.password` / `.password_file` | One of the two is required; the file wins and its trailing newline is trimmed. |
 | `claude.api_key` / `.api_key_file` | Same rule — one of the two is required. |
@@ -112,6 +113,27 @@ Serves the saved briefings from `database` for the web app, until Ctrl-C or SIGT
 | `PUT /api/briefings/{id}/status` | Body `{"status": "unread" \| "viewed" \| "finished"}`; answers the briefing, `404` if there is none |
 
 There is no login: keep it on `127.0.0.1`, or reach it over a VPN or a reverse proxy.
+
+With `[web] dir` set to a built web app (`web/dist`), `serve` also serves it at `/`.
+
+### The phone app (`web/`)
+
+A React PWA scaffolded from praline's `web.react` and `web.pwa` templates, in wallago/todo's
+colours. Install it from the browser ("Add to Home Screen") and it opens offline.
+
+- **Today:** a strip of days, unread / viewed / finished tiles, and one row per topic. Tap a row
+  to read it (marks it viewed); scroll to its end to finish it. Swipe right to mark it read, left
+  to keep it for later, with an undo.
+- **Morning popup:** the first time the app opens on a day with new briefings.
+- **Icon badge:** the number of briefings not finished yet, where the browser supports it.
+- **Usage:** tokens and cost per day, with the total.
+
+```sh
+cd web
+just dev      # Vite on :5173, /api proxied to a local `skimmer serve` on :3000
+just build    # web/dist, for `[web] dir`
+just test     # vitest; `just check`, `just lint`, `just fmt-check` too
+```
 
 Logs go to stderr — plain under journald, timestamped otherwise. Default level is warnings and
 errors; `-v` adds the per-topic progress.

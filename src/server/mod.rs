@@ -1,5 +1,6 @@
 //! Server core.
 
+use std::path::Path;
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 
 use axum::{Router, http::StatusCode, routing::get, serve};
@@ -8,6 +9,8 @@ use crate::{app::store::Store, config::Config, prelude::*};
 
 /// `/api/days` and `/api/briefings`.
 mod briefings;
+/// The web app at `/`.
+mod web;
 
 /// State shared by every route.
 #[derive(Clone)]
@@ -36,9 +39,13 @@ async fn health() -> StatusCode {
     StatusCode::OK
 }
 
-/// Global server routes.
-fn routes(state: AppState) -> Router {
-    let router = Router::new().merge(briefings::routes());
+/// Global server routes. With `web`, the web app in that folder answers
+/// every other path.
+fn routes(state: AppState, web: Option<&Path>) -> Router {
+    let mut router = Router::new().merge(briefings::routes());
+    if let Some(dir) = web {
+        router = router.merge(web::routes(dir));
+    }
     router.route("/health", get(health)).with_state(state)
 }
 
@@ -53,5 +60,6 @@ pub async fn start(config: &Config) -> Result<()> {
     let (address, port) = (&config.server.address, config.server.port);
     let listener = tokio::net::TcpListener::bind(format!("{address}:{port}")).await?;
     tracing::info!("Server running on {}", listener.local_addr()?);
-    Ok(serve(listener, routes(state)).await?)
+    let web = config.web.dir.as_deref();
+    Ok(serve(listener, routes(state, web)).await?)
 }
