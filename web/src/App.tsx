@@ -8,11 +8,30 @@ import {
   setStatus,
   unreadCount,
 } from "./api";
-import { showBadge } from "./badge";
+import { updateBadge } from "./badge";
 import { BriefingRow } from "./components/BriefingRow";
+import { NotifyRow } from "./components/NotifyRow";
 import { Reader } from "./components/Reader";
 import { Usage } from "./components/Usage";
 import type { SwipeAction } from "./swipe";
+
+/** How often the app checks for new briefings on its own while it's on screen. */
+const AUTO_SYNC_MS = 30_000;
+
+/** Calls `sync` every 30 s while visible, on coming back online or on screen, as todo does. */
+function useAutoSync(sync: () => void) {
+  useEffect(() => {
+    const onVisible = () => document.visibilityState === "visible" && sync();
+    const timer = window.setInterval(onVisible, AUTO_SYNC_MS);
+    window.addEventListener("online", sync);
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      window.clearInterval(timer);
+      window.removeEventListener("online", sync);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [sync]);
+}
 
 /** Where the morning popup remembers the last day it was shown for. */
 const POPUP_KEY = "skimmer.popup-day";
@@ -52,24 +71,37 @@ export function App() {
   const [popup, setPopup] = useState(false);
   const [undo, setUndo] = useState<Undo | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // Bumped by the auto sync: the effects below fetch again on each bump.
+  const [tick, setTick] = useState(0);
+  const bump = useCallback(() => setTick((t) => t + 1), []);
+  useAutoSync(bump);
 
   const refreshDays = useCallback(async () => {
     const fresh = await getDays();
     setDays(fresh);
-    void showBadge(unreadCount(fresh));
+    // The newest day's briefings: the ones the notifications are for.
+    const newest = fresh[0] ? await getDay(fresh[0].day) : [];
+    void updateBadge(unreadCount(fresh), newest);
     return fresh;
   }, []);
 
+  // `tick` is read so the effect runs again on each auto sync.
   useEffect(() => {
+    void tick;
     refreshDays()
       .then((fresh) => {
         const newest = fresh[0];
         if (!newest) return;
-        setDay(newest.day);
-        if (newest.unread > 0 && popupDay() !== newest.day) setPopup(true);
+        if (newest.unread > 0 && popupDay() !== newest.day) {
+          // A new morning, even with the app left open: show it.
+          setDay(newest.day);
+          setPopup(true);
+        } else {
+          setDay((d) => d ?? newest.day);
+        }
       })
       .catch((e: unknown) => setError(String(e)));
-  }, [refreshDays]);
+  }, [refreshDays, tick]);
 
   useEffect(() => {
     if (!undo) return;
@@ -78,8 +110,9 @@ export function App() {
   }, [undo]);
 
   useEffect(() => {
+    void tick;
     if (day) getDay(day).then(setBriefings, (e: unknown) => setError(String(e)));
-  }, [day]);
+  }, [day, tick]);
 
   const change = useCallback(
     async (id: number, status: Status, text?: string) => {
@@ -205,6 +238,7 @@ export function App() {
                 ))}
               </ul>
             )}
+            <NotifyRow onNotify={bump} />
           </>
         )}
       </main>

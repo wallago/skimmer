@@ -124,8 +124,13 @@ colours. Install it from the browser ("Add to Home Screen") and it opens offline
 - **Today:** a strip of days, unread / viewed / finished tiles, and one row per topic. Tap a row
   to read it (marks it viewed); scroll to its end to finish it. Swipe right to mark it read, left
   to keep it for later, with an undo.
-- **Morning popup:** the first time the app opens on a day with new briefings.
+- **Morning popup:** the first time the app opens on a day with new briefings, or when they land
+  while it is open. The app checks every 30 s while on screen, and on coming back to it.
 - **Icon badge:** the number of briefings not finished yet, where the browser supports it.
+- **Notifications:** after a tap on "Show new briefings as notifications", one quiet notification
+  per unread briefing of the newest day, closed once it is opened, as wallago/todo does for due
+  todos. On Android this is what badges the icon. They come from the app itself, not a push
+  server, so they appear when the app runs, not at 07:00 sharp with the app closed.
 - **Usage:** tokens and cost per day, with the total.
 
 ```sh

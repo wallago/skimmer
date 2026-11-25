@@ -90,3 +90,21 @@ test("the usage page lists tokens and cost per day", async () => {
   expect(screen.getByText("1.5k")).toBeTruthy();
   expect(screen.getAllByText("$0.0003").length).toBeGreaterThan(0);
 });
+
+test("a new morning arriving while the app is open shows the popup", async () => {
+  // The first load: yesterday, already read, so no popup.
+  const read: Day = { ...DAY, unread: 0, finished: 1 };
+  let days = [read];
+  vi.stubGlobal("fetch", async (url: string) =>
+    url.endsWith("api/days")
+      ? new Response(JSON.stringify(days))
+      : new Response(JSON.stringify([{ ...BRIEFING, status: "finished" }])),
+  );
+  render(<App />);
+  expect(await screen.findByText("Rust 2.0")).toBeTruthy();
+  expect(screen.queryByRole("dialog")).toBeNull();
+  // 07:00: a new day lands, and the app is brought back on screen.
+  days = [{ ...DAY, day: "2026-11-24" }, read];
+  fireEvent(document, new Event("visibilitychange"));
+  expect(await screen.findByRole("dialog", { name: "New briefings" })).toBeTruthy();
+});
