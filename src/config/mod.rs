@@ -24,6 +24,9 @@ mod topic;
 /// Server settings.
 pub(crate) mod server;
 
+/// Web app settings.
+pub(crate) mod web;
+
 /// The config types, for modules that hold one.
 pub mod prelude {
     pub use super::claude::Claude;
@@ -47,6 +50,8 @@ pub struct Config {
     pub database: Option<PathBuf>,
     /// Server config, for `skimmer serve`.
     pub(crate) server: server::ServerConfig,
+    /// The web app `skimmer serve` serves at `/`.
+    pub(crate) web: web::WebConfig,
     /// Who the briefing is for, in prose. Fed to Claude as standing context so
     /// it can rank entries instead of treating them all alike.
     pub reader: String,

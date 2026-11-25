@@ -100,7 +100,7 @@ mod tests {
     /// The app over a store holding one unread briefing on 2026-11-23.
     fn app() -> Router {
         let day = NaiveDate::from_ymd_opt(2026, 11, 23).unwrap();
-        routes(AppState::new(Store::sample(day)))
+        routes(AppState::new(Store::sample(day)), None)
     }
 
     /// Sends `request`, answers the status and the JSON body.

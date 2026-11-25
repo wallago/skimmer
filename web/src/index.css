@@ -1,0 +1,454 @@
+/* Palette and base layout from wallago/todo's web app, so both apps look alike. */
+:root {
+  --bg: #191a1b;
+  --panel: #202223;
+  --accent: #4be374;
+  --accent-bis: #163521;
+  --text: #cfe9d4;
+  --muted: #678070;
+  --warn: #ffbe3c;
+  --info: #5aa0ff;
+  --error: #eb5757;
+  color-scheme: dark;
+  font:
+    16px / 1.4 system-ui,
+    sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  padding-bottom: 96px;
+}
+
+header {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: max(8px, env(safe-area-inset-top)) 16px 8px;
+  background: var(--bg);
+  border-bottom: 1px solid var(--accent-bis);
+}
+
+.badge {
+  background: var(--accent);
+  color: var(--bg);
+  font-size: 12px;
+  font-weight: 700;
+  border-radius: 10px;
+  padding: 1px 7px;
+}
+
+nav {
+  display: flex;
+  gap: 4px;
+  margin-left: auto;
+}
+
+nav button {
+  color: var(--muted);
+  background: none;
+  border: 0;
+  padding: 6px 10px;
+  border-radius: 8px;
+}
+
+nav button.active {
+  color: var(--accent);
+  background: var(--accent-bis);
+}
+
+main {
+  padding: 8px 16px;
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+h1 {
+  font-size: 20px;
+  margin: 8px 0;
+  overflow-wrap: anywhere;
+}
+
+h2 {
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+  margin: 20px 0 6px;
+}
+
+ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+a {
+  color: var(--info);
+}
+
+.status.error {
+  color: var(--error);
+  font-size: 13px;
+}
+
+.muted {
+  color: var(--muted);
+}
+
+/* Day strip */
+.days {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding: 4px 0 10px;
+}
+
+.day {
+  flex: none;
+  padding: 6px 10px;
+  border-radius: 10px;
+  background: var(--panel);
+  border: 1px solid transparent;
+  font-size: 14px;
+}
+
+.day.on {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.day i {
+  display: block;
+  width: 6px;
+  height: 6px;
+  border-radius: 3px;
+  margin: 3px auto 0;
+  background: var(--accent);
+}
+
+/* Summary tiles, as todo's dashboard */
+.summary {
+  margin: 4px 0 8px;
+  padding: 12px;
+  background: var(--panel);
+  border: 1px solid var(--accent-bis);
+  border-radius: 12px;
+}
+
+.tiles,
+.tiles2 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.tiles2 {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+.tile span {
+  display: block;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+}
+
+.tile strong {
+  font-size: 24px;
+}
+
+.count-viewed {
+  color: var(--info);
+}
+
+.count-done {
+  color: var(--accent);
+}
+
+.progress {
+  display: block;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--accent-bis);
+  overflow: hidden;
+}
+
+.progress span {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+  transition: width 0.3s;
+}
+
+/* Briefing rows, swipeable */
+li.row {
+  position: relative;
+  overflow: hidden;
+  border-bottom: 1px solid var(--panel);
+}
+
+.under {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  padding: 0 18px;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.under.right {
+  background: var(--accent-bis);
+  color: var(--accent);
+}
+
+.under.left {
+  background: #2a2410;
+  color: var(--warn);
+  justify-content: flex-end;
+}
+
+.card {
+  position: relative;
+  display: flex;
+  width: 100%;
+  border: 0;
+  text-align: left;
+  gap: 10px;
+  padding: 10px 0;
+  background: var(--bg);
+  touch-action: pan-y;
+  cursor: pointer;
+  user-select: none;
+}
+
+.dot {
+  flex: none;
+  width: 14px;
+  margin-top: 6px;
+  font-size: 12px;
+  line-height: 1;
+  color: var(--info);
+}
+
+.unread .dot::before {
+  content: "";
+  display: block;
+  width: 9px;
+  height: 9px;
+  border-radius: 5px;
+  background: var(--accent);
+}
+
+.viewed .dot::before {
+  content: "◐";
+}
+
+.finished .dot::before {
+  content: "✓";
+  color: var(--muted);
+}
+
+.body {
+  flex: 1;
+  min-width: 0;
+}
+
+.topic {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--warn);
+}
+
+.head {
+  display: block;
+  margin: 2px 0;
+}
+
+.unread .head {
+  font-weight: 700;
+}
+
+.finished .head,
+.finished .topic {
+  color: var(--muted);
+}
+
+.prev {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.empty {
+  color: var(--muted);
+  padding: 24px 0;
+  text-align: center;
+}
+
+/* Reader */
+.back {
+  background: none;
+  border: 0;
+  color: var(--accent);
+  padding: 8px 0;
+}
+
+.digest {
+  background: var(--panel);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 15px;
+}
+
+.hl {
+  padding: 10px 0;
+  border-bottom: 1px solid var(--panel);
+}
+
+.hl p {
+  margin: 4px 0;
+  font-size: 15px;
+}
+
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.tag {
+  font-size: 12px;
+  padding: 1px 6px;
+  border-radius: 6px;
+  border: 1px solid var(--accent-bis);
+  color: var(--accent);
+  text-decoration: none;
+}
+
+summary {
+  color: var(--muted);
+  padding: 12px 0;
+  cursor: pointer;
+}
+
+.end {
+  margin: 40vh 0 12px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.end.done {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+/* Usage history */
+table.usage {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.usage th {
+  text-align: left;
+  color: var(--muted);
+  font-weight: 500;
+  font-size: 12px;
+  text-transform: uppercase;
+}
+
+.usage td,
+.usage th {
+  padding: 6px 4px;
+  border-bottom: 1px solid var(--panel);
+}
+
+/* Undo toast and morning popup, as todo's dialog */
+.toast {
+  position: fixed;
+  left: 16px;
+  right: 16px;
+  bottom: max(16px, env(safe-area-inset-bottom));
+  display: flex;
+  padding: 10px 12px;
+  background: var(--panel);
+  border: 1px solid var(--accent-bis);
+  border-radius: 10px;
+}
+
+.toast button {
+  margin-left: auto;
+  background: none;
+  border: 0;
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: #000a;
+}
+
+.dialog {
+  width: min(480px, 100%);
+  padding: 16px;
+  background: var(--panel);
+  border: 1px solid var(--accent-bis);
+  border-radius: 12px;
+}
+
+.dialog h2 {
+  margin-top: 0;
+}
+
+.buttons {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.grow {
+  flex: 1;
+}
+
+.buttons button {
+  padding: 8px 14px;
+  border: 1px solid var(--accent-bis);
+  border-radius: 8px;
+  background: var(--bg);
+}
+
+.buttons .primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--bg);
+}
