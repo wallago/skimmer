@@ -55,3 +55,14 @@ self.addEventListener("fetch", (event) => {
 async function fromCache(url: string): Promise<Response> {
   return (await caches.match(url)) ?? Response.error();
 }
+
+self.addEventListener("notificationclick", (event) => {
+  // A new briefing's notification: bring the app up rather than leave it to
+  // the browser. The notification stays until the briefing is opened.
+  event.waitUntil(
+    self.clients.matchAll({ type: "window" }).then((windows) => {
+      const open = windows[0];
+      return open ? open.focus() : self.clients.openWindow("./");
+    }),
+  );
+});

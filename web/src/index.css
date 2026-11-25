@@ -452,3 +452,17 @@ table.usage {
   border-color: var(--accent);
   color: var(--bg);
 }
+
+.notify {
+  margin: 20px 0;
+  text-align: center;
+  font-size: 13px;
+}
+
+.notify button {
+  padding: 8px 14px;
+  border: 1px solid var(--accent-bis);
+  border-radius: 8px;
+  background: var(--panel);
+  color: var(--accent);
+}
