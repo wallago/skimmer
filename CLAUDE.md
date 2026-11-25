@@ -68,3 +68,10 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 ---
 
 **These guidelines are working if:** fewer unnecessary changes in diffs, fewer rewrites due to overcomplication, and clarifying questions come before implementation rather than after mistakes.
+
+## Rules
+
+Standalone rules live in `.claude/rules/` and are imported here. Only files
+reachable from `CLAUDE.md` get loaded, so a new rule needs a line below.
+
+@.claude/rules/nix.md

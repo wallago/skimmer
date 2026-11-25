@@ -1,74 +1,67 @@
+import 'just/nix.just'
+import 'just/udeps.just'
+import 'just/deny.just'
+import 'just/audit.just'
+import 'just/codecov.just'
+import 'just/editorconfig.just'
+import 'just/typos.just'
+import 'just/lychee.just'
+import 'just/git.just'
+import 'just/github.just'
 import 'just/server.just'
+mod web 'web'
 
 # List all commands
 default:
     @just --list
 
-# Audit dependencies against the RustSec advisory DB
-[group('security')]
-audit:
-    cargo audit
+# Run every check before pushing
+[group('ci')]
+ci:
+    @just nix-lint
+    @just udeps
+    @just deny
+    @just audit
+    @just editorconfig
+    @just typos
+    @just links
+    @just workflows
+    @just rust-ci
+    @just web::ci
 
-# Regenerate CHANGELOG.md from git history
-[group('release')]
-changelog:
-    git-cliff -o CHANGELOG.md
+# The Rust checks: formatting, lints, tests and docs
+[group('ci')]
+rust-ci:
+    @just fmt-check
+    @just toml-check
+    @just lint
+    @just test
+    @just doc
 
 # Lint with clippy, treating warnings as errors
 [group('quality')]
 lint:
     cargo clippy --all-targets -- -D warnings
 
-# Report unused dependencies
+# Check Rust formatting
 [group('quality')]
-udeps:
-    cargo machete
+fmt-check:
+    cargo fmt --check
 
-# Run tests once under coverage instrumentation
-[group('dev')]
-coverage pattern="":
-    cargo llvm-cov nextest {{ if pattern != "" { "-E 'test(" + pattern + ")'" } else { "" } }}
+# Check TOML formatting
+[group('quality')]
+toml-check:
+    taplo fmt --check --diff
+
+# Build the docs, treating warnings as errors
+[group('quality')]
+doc:
+    RUSTDOCFLAGS=-Dwarnings cargo doc --no-deps
 
 # Open an HTML report from the last coverage run (run `just coverage` first)
 [group('dev')]
 coverage-report:
     cargo llvm-cov report --html --open
-
-# Emit lcov.info from the last coverage run (for CI / editors)
-[group('dev')]
-coverage-lcov:
-    cargo llvm-cov report --lcov --output-path target/lcov.info
-
-# Verify commit messages follow Conventional Commits
-[group('release')]
-commits base="main":
-    committed -vv $(git merge-base HEAD {{ base }})..HEAD
-
-# Check licenses, banned crates, sources and advisories
-[group('security')]
-deny:
-    cargo deny check
-
-# Check files conform to .editorconfig
-[group('quality')]
-editorconfig:
-    editorconfig-checker
-
-# Lint Nix (statix) and report dead Nix code (deadnix)
-[group('quality')]
-nix-lint:
-    statix check .
-    deadnix --fail .
-
-# Build & check every flake output on all systems
-[group('dev')]
-flake-check:
-    nix flake check --print-build-logs --all-systems
-
-# Update all flake inputs to their latest revisions
-[group('dev')]
-flake-update:
-    nix flake update
 
 # Run the app. Usage: just run -- statement.csv bagels.db
 [group('dev')]
@@ -100,11 +93,6 @@ test *ARGS:
 [group('quality')]
 fmt-toml:
     taplo fmt
-
-# Spell-check the codebase
-[group('quality')]
-typos:
-    typos
 
 # Cut & publish a release: bump version, changelog, commit, tag, push. Usage: just publish 0.2.0
 [confirm("This will tag and push a release to origin. Continue?")]
