@@ -86,7 +86,7 @@ root `justfile` loads each one as a module, and `just ci` runs every app's
 
 - `flake.nix`: dev shell (`nix develop`) and the lean CI shell (`nix develop .#ci`). Tools the checks run go in `ciTools`, editor-only ones in `devTools`. The package and the NixOS / home-manager modules come from `nix/`.
 - `apps/server/src/main.rs`, `lib.rs`: parse `Args`, then either the daily run (`app/`) or `serve` (`server/`).
-- `apps/server/src/app/`: one briefing per topic: fetch from Miniflux (`ext/rss.rs`), ask Claude (`ext/claude/`), render the report and save it in the store (`store.rs`, SQLite with `PRAGMA user_version` migrations).
+- `apps/server/src/app/`: one briefing per topic: fetch from Miniflux (`ext/rss.rs`), ask Claude (`ext/claude/`), save the briefing and the topic's last run in the store (`store.rs`, SQLite with `PRAGMA user_version` migrations). Nothing else is written to disk.
 - `apps/server/src/server/`: axum routes under `/api` (`briefings.rs`) and the built web app (`web.rs`).
 - `apps/server/src/config/`: `Config`, read from TOML; one table per component, each listed in `config.example.toml`.
 - `apps/server/src/error.rs`: the crate's one `Error` enum.

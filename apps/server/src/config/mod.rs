@@ -44,8 +44,6 @@ pub struct Config {
     pub claude: Claude,
     /// The topics to brief on, one `[topic.x]` each.
     pub topic: HashMap<String, Topic>,
-    /// Output dir.
-    pub output: PathBuf,
     /// Briefings database. Defaults to `$XDG_STATE_HOME/skimmer/skimmer.db`.
     pub database: Option<PathBuf>,
     /// Server config, for `skimmer serve`.

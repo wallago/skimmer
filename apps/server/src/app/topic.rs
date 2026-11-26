@@ -1,13 +1,13 @@
-//! Topics, resolved against the feed list and the state file.
+//! Topics, resolved against the feed list and the last runs in the store.
 
 use std::collections::HashMap;
 
 use chrono::{DateTime, Utc};
 
+use super::store::Store;
 use crate::{
     ext::prelude::*,
     prelude::{Topic as TopicExt, *},
-    state::State,
 };
 
 /// A configured topic.
@@ -20,7 +20,7 @@ pub(crate) struct Topic {
     question: String,
     /// What the reader wants out of this topic. Empty when unset.
     context: String,
-    /// The topic's name, as in the config and the state file.
+    /// The topic's name, as in the config and the store.
     name: String,
 }
 
@@ -36,12 +36,12 @@ impl Topic {
     pub(crate) fn new(
         cfg_topics: &HashMap<String, TopicExt>,
         since: Option<DateTime<Utc>>,
-        state: &State,
+        store: &Store,
         rss: &Rss,
     ) -> Result<HashMap<String, Self>> {
         let mut topics = HashMap::new();
         for (name, topic) in cfg_topics {
-            let last_run = match since.or(state.get_last_run(name)) {
+            let last_run = match since.or(store.last_run(name)?) {
                 Some(last_run) => last_run,
                 None => Utc::now() - topic.get_interval()?,
             };
