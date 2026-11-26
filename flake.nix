@@ -110,11 +110,15 @@
             packages = rec {
               skimmer = buildApp { release = true; };
               skimmer-debug = buildApp { release = false; };
+              web = pkgs.callPackage ./nix/web.nix { src = ./apps/web; };
               default = skimmer;
             };
 
             # ── Checks (nix flake check) ─────────────────────────────
-            checks.check = self.packages.${system}.skimmer-debug;
+            checks = {
+              check = self.packages.${system}.skimmer-debug;
+              inherit (self.packages.${system}) web;
+            };
 
             # ── Dev Shell (nix develop) ──────────────────────────────
             devShells.default =
