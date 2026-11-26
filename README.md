@@ -162,7 +162,6 @@ service. Both units share `/var/lib/skimmer/skimmer.db`:
     verbose  = 1;
     schedule = "*-*-* 07:00:00 Europe/Paris"; # the default
     serve    = true;
-    firewallInterfaces = [ "wg0" ]; # open the serve port on these interfaces only
     settings = {
       output = "/var/lib/skimmer";
       miniflux = {
