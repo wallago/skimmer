@@ -9,6 +9,17 @@ let
   cfg = config.services.skimmer;
   settingsFormat = pkgs.formats.toml { };
   configFile = settingsFormat.generate "config.toml" cfg.settings;
+  verboseFlag = lib.optionalString (
+    cfg.verbose > 0
+  ) " -${lib.concatStrings (lib.replicate cfg.verbose "v")}";
+  command = "${lib.getExe cfg.package} --config %d/config${verboseFlag}";
+  # Both units read the same config and, through XDG_STATE_HOME, open the same
+  # database: /var/lib/skimmer/skimmer.db.
+  shared = {
+    LoadCredential = "config:${configFile}";
+    StateDirectory = "skimmer";
+    Environment = "XDG_STATE_HOME=%S";
+  };
 in
 {
   options.services."skimmer" = {
@@ -34,11 +45,24 @@ in
       '';
     };
 
+    schedule = lib.mkOption {
+      type = lib.types.str;
+      default = "*-*-* 07:00:00 Europe/Paris";
+      example = "*-*-* 06:30:00 UTC";
+      description = ''
+        When the daily briefings are written, as a systemd `OnCalendar` value.
+        The time zone is part of the value, so it holds whatever the host's own.
+      '';
+    };
+
+    serve = lib.mkEnableOption "the `skimmer serve` web app and API, at `settings.server` (127.0.0.1:3000 by default)";
+
     settings = lib.mkOption {
       inherit (settingsFormat) type;
       default = { };
       example = {
         output = "/home/wallago/sync-notes/skimmer/";
+        reader = "User description.";
         miniflux = {
           url = "http://localhost";
           user = "admin";
@@ -46,7 +70,7 @@ in
           password_file = "./to/password/file";
         };
         claude = {
-          model = "claude-haiku-4-5";
+          model = "claude-haiku-5-5";
           api_key = "sk-key";
           api_key_file = "./to/key/file";
         };
@@ -57,6 +81,7 @@ in
               "Reddit Rust"
               "This Week in Rust"
             ];
+            context = "What the user want to know";
             interval = "24h";
           };
         };
@@ -77,28 +102,33 @@ in
   config = lib.mkIf cfg.enable {
     environment.systemPackages = [ cfg.package ];
 
-    systemd.services.skimmer = {
-      after = [ "network-online.target" ];
-      wants = [ "network-online.target" ];
-      serviceConfig =
-        let
-          verboseFlag = lib.optionalString (
-            cfg.verbose > 0
-          ) " -${lib.concatStrings (lib.replicate cfg.verbose "v")}";
-        in
-        {
+    systemd = {
+      services.skimmer = {
+        after = [ "network-online.target" ];
+        wants = [ "network-online.target" ];
+        serviceConfig = {
           Type = "oneshot";
-          ExecStart = "${lib.getExe cfg.package} --config %d/config${verboseFlag}${lib.optionalString cfg.dry_run " --dry-run"}";
-          LoadCredential = "config:${configFile}";
-          StateDirectory = "skimmer";
+          ExecStart = "${command}${lib.optionalString cfg.dry_run " --dry-run"}";
+        }
+        // shared;
+      };
+      timers.skimmer = {
+        wantedBy = [ "timers.target" ];
+        timerConfig = {
+          OnCalendar = cfg.schedule;
+          Persistent = true;
         };
-    };
-    systemd.timers.skimmer = {
-      wantedBy = [ "timers.target" ];
-      timerConfig = {
-        OnCalendar = "daily";
-        Persistent = true;
-        RandomizedDelaySec = "15m";
+      };
+
+      services.skimmer-serve = lib.mkIf cfg.serve {
+        description = "skimmer web app and API";
+        wantedBy = [ "multi-user.target" ];
+        after = [ "network.target" ];
+        serviceConfig = {
+          ExecStart = "${command} serve";
+          Restart = "on-failure";
+        }
+        // shared;
       };
     };
 

@@ -8,4 +8,7 @@
 
 [files]
 # Exclude files or directories from checking
-extend-exclude = ["CHANGELOG.md"]
+extend-exclude = [
+  "CHANGELOG.md",
+  "pnpm-lock.yaml",
+]

@@ -9,7 +9,10 @@
     "superpowers@claude-plugins-official": true,
     "andrej-karpathy-skills@karpathy-skills": true
   },
+  "model": "claude-opus-5-5",
+  "effortLevel": "high",
   "permissions": {
+    "defaultMode": "manual",
     "defaultMode": "manual",
     "allow": [
       "Bash(nix flake check*)",

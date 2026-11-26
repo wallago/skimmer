@@ -14,6 +14,16 @@ target/
 
 # NOTE: Cargo.lock is committed on purpose
 
+# Coverage report from `just coverage`
+lcov.info
+
+# ── Web / pnpm ───────────────────────────────────────────────
+node_modules/
+dist/
+*.tsbuildinfo
+
+# NOTE: pnpm-lock.yaml is committed on purpose
+
 # ── Nix ──────────────────────────────────────────────────────
 # Build result symlinks (result, result-bin, result-1, …)
 /result
