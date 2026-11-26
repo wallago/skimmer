@@ -51,6 +51,18 @@ impl Topic {
                 .filter(|feed| topic.get_feeds().iter().any(|p| feed.title.contains(p)))
                 .map(|feed| (feed.title.clone(), feed.clone()))
                 .collect();
+            if topic_feeds.is_empty() {
+                let mut known: Vec<&str> = rss
+                    .get_feeds()
+                    .iter()
+                    .map(|feed| feed.title.as_str())
+                    .collect();
+                known.sort_unstable();
+                tracing::warn!(
+                    "Topic {name}: no Miniflux feed title contains any of {:?}. Feed titles are: {known:?}",
+                    topic.get_feeds(),
+                );
+            }
             topics.insert(
                 name.clone(),
                 Topic {

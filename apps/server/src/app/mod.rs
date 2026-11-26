@@ -132,9 +132,11 @@ impl App {
 
         if entries.is_empty() {
             tracing::warn!(
-                "Topic {}: no entries since {}",
+                "Topic {}: no entries since {} in its {} feed(s): {:?}",
                 topic.get_name(),
-                topic.get_last_run()
+                topic.get_last_run(),
+                topic.get_feeds().len(),
+                topic.get_feeds().keys().collect::<Vec<_>>(),
             );
         }
 
