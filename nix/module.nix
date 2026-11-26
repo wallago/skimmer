@@ -55,13 +55,19 @@ in
       '';
     };
 
+    firewallInterfaces = lib.mkOption {
+      type = lib.types.listOf lib.types.str;
+      default = [ ];
+      example = [ "wg0" ];
+      description = "Open the `serve` port (`settings.server.port`, 3000 by default) on these interfaces only.";
+    };
+
     serve = lib.mkEnableOption "the `skimmer serve` web app and API, at `settings.server` (127.0.0.1:3000 by default)";
 
     settings = lib.mkOption {
       inherit (settingsFormat) type;
       default = { };
       example = {
-        output = "/home/wallago/sync-notes/skimmer/";
         reader = "User description.";
         miniflux = {
           url = "http://localhost";
@@ -131,6 +137,12 @@ in
         // shared;
       };
     };
+
+    networking.firewall.interfaces = lib.mkIf cfg.serve (
+      lib.genAttrs cfg.firewallInterfaces (_: {
+        allowedTCPPorts = [ (cfg.settings.server.port or 3000) ];
+      })
+    );
 
     environment.etc."skimmer/config.toml" = lib.mkIf (cfg.settings != { }) {
       source = configFile;

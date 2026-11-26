@@ -1,4 +1,3 @@
-output = "/dev/null"
 reader = """
 Reader stuff
 """
