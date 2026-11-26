@@ -183,7 +183,7 @@ impl Rss {
     pub(crate) fn render_entries(entries: &[Entry]) -> String {
         entries.iter().map(|e| format!(
             "<entry id=\"{}\" feed=\"{}\" published=\"{}\">\n<title>{}</title>\n<content>{}</content>\n</entry>",
-            e.id, e.feed.title, e.published_at, e.title, escape(&e.content),
+            e.id, escape(&e.feed.title), e.published_at, escape(&e.title), escape(&e.content),
         )).collect::<Vec<_>>().join("\n")
     }
 }

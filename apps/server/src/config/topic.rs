@@ -19,6 +19,21 @@ pub struct Topic {
     /// What the reader wants out of this topic specifically. Optional.
     #[serde(default)]
     context: String,
+    /// Also search the web for this topic, on top of its feeds. Off by default.
+    #[serde(default)]
+    web_search: bool,
+    /// Most web searches per run when `web_search` is on.
+    #[serde(default = "default_max_searches")]
+    max_searches: u32,
+    /// Sites the web search may use, like `"blog.rust-lang.org"`. Empty means
+    /// any site.
+    #[serde(default)]
+    allowed_sites: Vec<String>,
+}
+
+/// Three searches is about $0.03 a run, enough for a daily topic.
+const fn default_max_searches() -> u32 {
+    3
 }
 
 impl Topic {
@@ -48,6 +63,13 @@ impl Topic {
     pub fn get_context(&self) -> &str {
         &self.context
     }
+
+    /// The web search limits, or [`None`] when `web_search` is off.
+    #[must_use]
+    pub fn get_web_search(&self) -> Option<(u32, &[String])> {
+        self.web_search
+            .then_some((self.max_searches, self.allowed_sites.as_slice()))
+    }
 }
 
 #[cfg(test)]
@@ -69,6 +91,23 @@ mod tests {
                 "question = [\"test ?\"]\ncontext = [\"test\"]\nfeeds = \"test\"\ninterval = [\"23h\"]",
             )
             .is_err()
+        );
+    }
+
+    #[test]
+    fn web_search_is_off_unless_asked_and_defaults_to_three_searches() {
+        let base = "question = \"q\"\nfeeds = []\ninterval = \"1d\"\n";
+        let off: Topic = toml::from_str(base).unwrap();
+        assert_eq!(off.get_web_search(), None);
+        let on: Topic = toml::from_str(&format!("{base}web_search = true")).unwrap();
+        assert_eq!(on.get_web_search(), Some((3, [].as_slice())));
+        let limited: Topic = toml::from_str(&format!(
+            "{base}web_search = true\nmax_searches = 1\nallowed_sites = [\"blog.rust-lang.org\"]"
+        ))
+        .unwrap();
+        assert_eq!(
+            limited.get_web_search(),
+            Some((1, ["blog.rust-lang.org".to_owned()].as_slice()))
         );
     }
 }

@@ -27,6 +27,10 @@ question = "What's going on interesting in the Rust world the past day?"
 feeds    = ["Reddit Rust", "This Week in Rust"]
 context  = "I care about async internals, TUI crates and build tooling. Show me crates I'd actually depend on, not weekend projects."
 interval = "7d"
+# Also search the web, on top of the feeds ($0.01 a search, plus the pages' tokens).
+web_search    = true
+max_searches  = 3                      # the default
+allowed_sites = ["blog.rust-lang.org"] # optional; leave out for any site
 
 [topic.youtube]
 question = "What's new for those video channel the past week?"
