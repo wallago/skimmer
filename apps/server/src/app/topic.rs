@@ -7,7 +7,7 @@ use chrono::{DateTime, Utc};
 use super::store::Store;
 use crate::{
     ext::prelude::*,
-    prelude::{Topic as TopicExt, *},
+    prelude::{Result, Topic as TopicExt},
 };
 
 /// A configured topic.
