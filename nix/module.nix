@@ -8,7 +8,8 @@ self:
 let
   cfg = config.services.skimmer;
   settingsFormat = pkgs.formats.toml { };
-  configFile = settingsFormat.generate "config.toml" cfg.settings;
+  settings = cfg.settings // lib.optionalAttrs (cfg.web != null) { web.dir = "${cfg.web}"; };
+  configFile = settingsFormat.generate "config.toml" settings;
   verboseFlag = lib.optionalString (
     cfg.verbose > 0
   ) " -${lib.concatStrings (lib.replicate cfg.verbose "v")}";
@@ -97,6 +98,16 @@ in
       '';
     };
 
+    web = lib.mkOption {
+      type = lib.types.nullOr lib.types.package;
+      default = self.packages.${pkgs.stdenv.hostPlatform.system}.web;
+      defaultText = lib.literalExpression "skimmer.packages.\${system}.web";
+      description = ''
+        The built web app (`apps/web`), served at `/` by `skimmer serve`
+        as `settings.web.dir`. null: no web app.
+      '';
+    };
+
     package = lib.mkOption {
       type = lib.types.package;
       default = self.packages.${pkgs.stdenv.hostPlatform.system}.default;
@@ -144,7 +155,7 @@ in
       })
     );
 
-    environment.etc."skimmer/config.toml" = lib.mkIf (cfg.settings != { }) {
+    environment.etc."skimmer/config.toml" = lib.mkIf (settings != { }) {
       source = configFile;
     };
   };
