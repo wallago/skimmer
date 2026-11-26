@@ -14,20 +14,20 @@ use crate::{app::render::Briefing, prelude::*};
 const MIGRATIONS: &[&str] = &[
     "
 create table briefings (
-  id          integer primary key,
-  topic       text not null,
-  day         text not null,  -- local date the briefing belongs to, YYYY-MM-DD
-  question    text not null,
-  since       text not null,  -- start of the window, RFC 3339
-  scanned     integer not null,
-  digest      text not null,
-  highlights  text not null,  -- JSON: [{headline, detail, entry_ids}]
-  sources     text not null,  -- JSON: [{id, title, feed, url}]
-  model       text not null,
-  status      text not null default 'unread'
-              check (status in ('unread', 'viewed', 'finished')),
-  created_at  text not null,
-  updated_at  text not null
+    id          integer primary key,
+    topic       text not null,
+    day         text not null,  -- local date the briefing belongs to, YYYY-MM-DD
+    question    text not null,
+    since       text not null,  -- start of the window, RFC 3339
+    scanned     integer not null,
+    digest      text not null,
+    highlights  text not null,  -- JSON: [{headline, detail, entry_ids}]
+    sources     text not null,  -- JSON: [{id, title, feed, url}]
+    model       text not null,
+    status      text not null default 'unread'
+                check (status in ('unread', 'viewed', 'finished')),
+    created_at  text not null,
+    updated_at  text not null
 );
 create index briefings_day on briefings (day);
 ",
@@ -227,7 +227,7 @@ impl Store {
                     count(*) filter (where status = 'viewed'),
                     count(*) filter (where status = 'finished'),
                     sum(input_tokens), sum(output_tokens), sum(cost_usd)
-             from briefings group by day order by day desc",
+            from briefings group by day order by day desc",
         )?;
         let days = statement.query_map([], |row| {
             Ok(DayCount {
@@ -283,7 +283,7 @@ impl Store {
             "insert into briefings (topic, day, question, since, scanned, digest, highlights,
                                     sources, model, created_at, updated_at,
                                     input_tokens, output_tokens, cost_usd)
-             values (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?10, ?11, ?12, ?13)",
+            values (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?10, ?11, ?12, ?13)",
             params![
                 briefing.topic,
                 day.to_string(),

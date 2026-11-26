@@ -76,6 +76,7 @@
 
             # ── Tooling shared by the dev shell and CI ───────────────
             ciTools = with pkgs; [
+              just
               rust
               # rust tooling
               cargo-nextest
@@ -90,6 +91,11 @@
               taplo
               editorconfig-checker
               lychee
+              actionlint
+
+              # web tooling
+              nodejs_24
+              pnpm
 
               # nix tooling
               nixfmt

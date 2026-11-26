@@ -41,7 +41,7 @@ cargo build --release   # target/release/skimmer
 
 ## Configuration
 
-Copy [`config.template.toml`](config.template.toml) to `$XDG_CONFIG_HOME/skimmer/config.toml`
+Copy [`config.example.toml`](apps/server/config.example.toml) to `$XDG_CONFIG_HOME/skimmer/config.toml`
 and fill it in. Unknown top-level keys are rejected.
 
 ```toml
@@ -67,7 +67,7 @@ interval = "7d"
 | `output` | Directory the reports land in. Must already exist. |
 | `database` | Optional. SQLite file each briefing is also saved to, unread, for the web app. Defaults to `$XDG_STATE_HOME/skimmer/skimmer.db`. |
 | `server.address` / `.port` | Where `skimmer serve` listens. Defaults to `127.0.0.1` and `3000`. |
-| `web.dir` | Optional. Built web app (`web/dist`) that `skimmer serve` serves at `/`. |
+| `web.dir` | Optional. Built web app (`apps/web/dist`) that `skimmer serve` serves at `/`. |
 | `miniflux.url` / `.username` | Server and the account to read feeds as. |
 | `miniflux.password` / `.password_file` | One of the two is required; the file wins and its trailing newline is trimmed. |
 | `claude.api_key` / `.api_key_file` | Same rule — one of the two is required. |
@@ -114,9 +114,9 @@ Serves the saved briefings from `database` for the web app, until Ctrl-C or SIGT
 
 There is no login: keep it on `127.0.0.1`, or reach it over a VPN or a reverse proxy.
 
-With `[web] dir` set to a built web app (`web/dist`), `serve` also serves it at `/`.
+With `[web] dir` set to a built web app (`apps/web/dist`), `serve` also serves it at `/`.
 
-### The phone app (`web/`)
+### The phone app (`apps/web/`)
 
 A React PWA scaffolded from praline's `web.react` and `web.pwa` templates, in wallago/todo's
 colours. Install it from the browser ("Add to Home Screen") and it opens offline.
@@ -134,10 +134,9 @@ colours. Install it from the browser ("Add to Home Screen") and it opens offline
 - **Usage:** tokens and cost per day, with the total.
 
 ```sh
-cd web
-just dev      # Vite on :5173, /api proxied to a local `skimmer serve` on :3000
-just build    # web/dist, for `[web] dir`
-just test     # vitest; `just check`, `just lint`, `just fmt-check` too
+just web::dev      # Vite on :5173, /api proxied to a local `skimmer serve` on :3000
+just web::build    # apps/web/dist, for `[web] dir`
+just web::test     # vitest; `web::check`, `web::lint`, `web::fmt-check` too
 ```
 
 Logs go to stderr — plain under journald, timestamped otherwise. Default level is warnings and
@@ -179,7 +178,7 @@ service. Both units share `/var/lib/skimmer/skimmer.db`:
         feeds    = [ "Reddit Rust" "This Week in Rust" ];
         interval = "24h";
       };
-      web.dir = "/srv/skimmer-web"; # a copy of web/dist, from `just build` in web/
+      web.dir = "/srv/skimmer-web"; # a copy of apps/web/dist, from `just web::build`
     };
   };
 }
@@ -192,17 +191,18 @@ service. Both units share `/var/lib/skimmer/skimmer.db`:
 `nix develop` brings in the toolchain and every tool below; [`just`](justfile) drives them:
 
 ```sh
-just check         # cargo check --all-targets
-just test          # cargo nextest run
-just lint          # clippy, warnings denied
-just fmt           # rustfmt + nixfmt
-just coverage      # cargo llvm-cov nextest
-just audit / deny  # RustSec advisories, license & source policy
-just flake-check   # every flake output, all systems
+just ci                # every check CI runs; green here is green there
+just server::check     # cargo check --all-targets
+just server::test      # cargo nextest run
+just server::lint      # clippy, warnings denied
+just server::fmt       # rustfmt + taplo; `just fmt-nix` for the Nix sources
+just coverage          # cargo llvm-cov, into lcov.info
+just audit / deny      # RustSec advisories, license & source policy
+just flake-check       # every flake output, all systems
 ```
 
 Tests are unit tests next to the code, with [wiremock](https://docs.rs/wiremock) standing in for
-Miniflux and fixtures under `tests/fixtures/`. Commits follow Conventional Commits (`just
+Miniflux and fixtures under `apps/server/tests/fixtures/`. Commits follow Conventional Commits (`just
 commits` checks them) and the changelog is generated with git-cliff.
 
 ## License
