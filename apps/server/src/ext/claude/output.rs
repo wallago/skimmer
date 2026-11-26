@@ -13,6 +13,8 @@ pub(crate) struct Highlight {
     entry_ids: Vec<i64>,
 }
 
+// Read back only by tests: the store saves highlights as serialized JSON.
+#[cfg(test)]
 impl Highlight {
     /// Entries this highlight was drawn from.
     pub(crate) fn get_entry_ids(&self) -> &[i64] {

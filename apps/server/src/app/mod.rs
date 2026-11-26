@@ -5,7 +5,6 @@ use std::{collections::HashMap, str::FromStr};
 use crate::{
     app::{
         render::Briefing,
-        report::Report,
         store::{Spend, Store},
         topic::Topic,
     },
@@ -16,10 +15,7 @@ use crate::{
 /// Subject topic.
 mod topic;
 
-/// Report.
-mod report;
-
-/// Render output.
+/// One topic's briefing.
 mod render;
 
 /// Briefings database.
@@ -35,16 +31,12 @@ struct Tokens {
 
 /// Everything a run needs, wired together once.
 pub(crate) struct App {
-    /// File save.
-    state: State,
     /// Feed source.
     rss: Rss,
     /// Summarizer.
     claude: Claude,
     /// Topics to brief on, keyed by name.
     topics: HashMap<String, Topic>,
-    /// Briefings collected so far.
-    report: Report,
     /// Where briefings are saved for the web app.
     store: Store,
     /// Dry run to no token cost.
@@ -53,20 +45,17 @@ pub(crate) struct App {
 
 impl App {
     /// Connects to the RSS server and resolves the configured topics.
-    pub(crate) async fn new(args: &Args, config: Config, state: State) -> Result<Self> {
+    pub(crate) async fn new(args: &Args, config: Config) -> Result<Self> {
         let (url_raw, username, password) = config.miniflux.get_all();
         let url = url::Url::from_str(url_raw)?;
         let rss = Rss::new(url, username, password).await?;
         let claude = Claude::new(&config);
-        let topics = Topic::new(&config.topic, args.since, &state, &rss)?;
-        let report = Report::new(config.output)?;
         let store = Store::open(config.database)?;
+        let topics = Topic::new(&config.topic, args.since, &store, &rss)?;
         Ok(Self {
-            state,
             rss,
             claude,
             topics,
-            report,
             store,
             dry_run: args.dry_run,
         })
@@ -105,8 +94,7 @@ impl App {
                     }),
                 };
                 self.store.add(&briefing, self.claude.get_model(), spend)?;
-                self.report.add(briefing);
-                self.state.set_last_run(name)?;
+                self.store.set_last_run(name)?;
             }
         }
         if !self.dry_run {
@@ -126,8 +114,6 @@ impl App {
                     total_usage.output,
                 );
             }
-            self.report.generate(&self.claude)?;
-            self.state.save()?;
             self.rss.mark_as_read(&read).await?;
         }
         Ok(())
