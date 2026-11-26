@@ -4,22 +4,22 @@ AI agent that reads your RSS feeds and keeps only what's worth your time.
 
 `skimmer` pulls the entries your [Miniflux](https://miniflux.app) server collected since the
 last run, groups them into the topics you define, asks Claude one question per topic, and
-saves each answer to a SQLite database that `skimmer serve` shows on your phone.
+writes a single markdown report.
 
 ## How it works
 
-1. **Load** — config from `--config`, else `$XDG_CONFIG_HOME/skimmer/config.toml`; each topic's
-   last run from the `database`.
+1. **Load** — config from `--config`, else `$XDG_CONFIG_HOME/skimmer/config.toml`; state from
+   `$XDG_STATE_HOME/skimmer/state.toml`.
 2. **Resolve topics** — each `[topic.<name>]` matches the server's feeds whose title *contains*
    one of its `feeds` strings.
 3. **Window** — entries published after `--since`, else after that topic's last run, else one
    `interval` ago.
 4. **Ask** — entries are rendered as escaped `<entry id="…">` blocks and sent to the Messages
    API with a JSON schema, so the answer comes back as a digest plus cited highlights.
-5. **Save** — each briefing goes to the `database`, unread, with its source links back to each
-   entry.
-6. **Record** — each briefed topic's `last_run` is stamped in the `database`, so the next run
-   picks up where this one stopped.
+5. **Write** — `report_<timestamp>.md` in `output`, one section per topic, with source links
+   back to each entry. Each briefing is also saved, unread, to the `database`.
+6. **Record** — each briefed topic's `last_run` is stamped, so the next run picks up where this
+   one stopped.
 
 Feed content is untrusted: XML metacharacters are escaped before it reaches the prompt, and the
 system prompt tells Claude to summarize entry content, never to follow instructions inside it.
@@ -45,6 +45,8 @@ Copy [`config.example.toml`](apps/server/config.example.toml) to `$XDG_CONFIG_HO
 and fill it in. Unknown top-level keys are rejected.
 
 ```toml
+output = "/home/you/notes/skimmer"   # existing directory the reports are written to
+
 [miniflux]
 url      = "https://rss.example.com"
 username = "admin"
@@ -62,7 +64,8 @@ interval = "7d"
 
 | Key | Meaning |
 | --- | --- |
-| `database` | Optional. SQLite file the briefings and each topic's last run are saved to. Defaults to `$XDG_STATE_HOME/skimmer/skimmer.db`. |
+| `output` | Directory the reports land in. Must already exist. |
+| `database` | Optional. SQLite file each briefing is also saved to, unread, for the web app. Defaults to `$XDG_STATE_HOME/skimmer/skimmer.db`. |
 | `server.address` / `.port` | Where `skimmer serve` listens. Defaults to `127.0.0.1` and `3000`. |
 | `web.dir` | Optional. Built web app (`apps/web/dist`) that `skimmer serve` serves at `/`. |
 | `miniflux.url` / `.username` | Server and the account to read feeds as. |
@@ -76,8 +79,8 @@ interval = "7d"
 Secret files are the reason `password_file` / `api_key_file` exist: point them at a sops-nix or
 systemd credential path and keep the key out of the config.
 
-One caveat on the template: the `categories` key on `[topic.bicycle]` is not implemented — only
-`feeds` selects feeds today.
+Two caveats on the template: `output` is not in it but is required in practice, and the
+`categories` key on `[topic.bicycle]` is not implemented — only `feeds` selects feeds today.
 
 ## Usage
 
@@ -95,7 +98,7 @@ skimmer [OPTIONS] [COMMAND]
 ```
 
 `--dry-run` prices the prompt against a built-in rate table (haiku 4.5, sonnet 5, opus 5) and
-leaves the database untouched. A `--feeds` flag is also accepted but is
+leaves both the report and the state file untouched. A `--feeds` flag is also accepted but is
 currently a no-op.
 
 ### `skimmer serve`
@@ -161,6 +164,7 @@ service. Both units share `/var/lib/skimmer/skimmer.db`:
     serve    = true;
     firewallInterfaces = [ "wg0" ]; # open the serve port on these interfaces only
     settings = {
+      output = "/var/lib/skimmer";
       miniflux = {
         url           = "https://rss.example.com";
         username      = "admin";

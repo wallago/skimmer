@@ -68,6 +68,7 @@ in
       inherit (settingsFormat) type;
       default = { };
       example = {
+        output = "/home/wallago/sync-notes/skimmer/";
         reader = "User description.";
         miniflux = {
           url = "http://localhost";

@@ -3,7 +3,7 @@
 
 use std::path::PathBuf;
 
-use chrono::{DateTime, Local, NaiveDate, Utc};
+use chrono::{Local, NaiveDate, Utc};
 use dirs::state_dir;
 use rusqlite::{Connection, OptionalExtension, Row, params};
 use serde::{Deserialize, Serialize};
@@ -35,12 +35,6 @@ create index briefings_day on briefings (day);
 alter table briefings add column input_tokens  integer not null default 0;
 alter table briefings add column output_tokens integer not null default 0;
 alter table briefings add column cost_usd      real;  -- null: model not in the price table
-",
-    "
-create table topic_state (
-    topic     text primary key,
-    last_run  text not null  -- end of the last briefed window, RFC 3339
-);
 ",
 ];
 
@@ -210,44 +204,6 @@ impl Store {
             }
         }
         Ok(Self { conn })
-    }
-
-    /// Where `topic`'s last run stopped, or [`None`] if it never ran.
-    ///
-    /// # Errors
-    ///
-    /// Returns an [`Error`] if the query fails or the stored time does not parse.
-    pub(crate) fn last_run(&self, topic: &str) -> Result<Option<DateTime<Utc>>> {
-        let raw: Option<String> = self
-            .conn
-            .query_row(
-                "select last_run from topic_state where topic = ?1",
-                params![topic],
-                |row| row.get(0),
-            )
-            .optional()?;
-        Ok(raw
-            .map(|raw| DateTime::parse_from_rfc3339(&raw).map(|at| at.with_timezone(&Utc)))
-            .transpose()?)
-    }
-
-    /// Records that `topic` was briefed up to now.
-    ///
-    /// # Errors
-    ///
-    /// Returns an [`Error`] if the upsert fails.
-    pub(crate) fn set_last_run(&self, topic: &str) -> Result<()> {
-        self.set_last_run_at(topic, Utc::now())
-    }
-
-    /// Records that `topic` was briefed up to `at`.
-    fn set_last_run_at(&self, topic: &str, at: DateTime<Utc>) -> Result<()> {
-        self.conn.execute(
-            "insert into topic_state (topic, last_run) values (?1, ?2) \
-                on conflict (topic) do update set last_run = excluded.last_run",
-            params![topic, at.to_rfc3339()],
-        )?;
-        Ok(())
     }
 
     /// Saves one topic's briefing as unread, under today's local date.
@@ -453,18 +409,6 @@ mod tests {
         let saved = store.set_status(1, Status::Finished).unwrap().unwrap();
         assert_eq!(saved.status, Status::Finished);
         assert!(store.set_status(99, Status::Viewed).unwrap().is_none());
-    }
-
-    #[test]
-    fn last_run_is_none_until_set_then_follows_the_latest() {
-        let store = store();
-        assert_eq!(store.last_run("rust").unwrap(), None);
-        let first: DateTime<Utc> = "2026-11-24T06:00:00Z".parse().unwrap();
-        let second: DateTime<Utc> = "2026-11-25T06:00:00Z".parse().unwrap();
-        store.set_last_run_at("rust", first).unwrap();
-        store.set_last_run_at("rust", second).unwrap();
-        assert_eq!(store.last_run("rust").unwrap(), Some(second));
-        assert_eq!(store.last_run("bicycle").unwrap(), None);
     }
 
     #[test]

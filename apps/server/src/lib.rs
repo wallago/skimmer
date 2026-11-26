@@ -12,6 +12,9 @@ pub mod args;
 /// External Access.
 pub mod ext;
 
+/// State save in a file.
+pub mod state;
+
 /// Config file.
 pub mod config;
 
@@ -50,7 +53,9 @@ pub async fn run(args: &Args) -> Result<()> {
         }
         return Ok(());
     }
-    let mut app = App::new(args, config).await?;
+    let state = State::load(None)?;
+
+    let mut app = App::new(args, config, state).await?;
     app.run().await
 
     // TODO => Descid if keeping as aid

@@ -10,7 +10,7 @@ keywords     = []
 categories   = []
 edition      = "2024"
 rust-version = "1.89"
-include      = ["src/**/*", "Cargo.*", "LICENSE*", "README.md", "CHANGELOG.md"]
+include      = ["assets/**/*", "src/**/*", "Cargo.*", "LICENSE*", "README.md", "CHANGELOG.md"]
 
 [dependencies]
 axum = "0.8.9"

@@ -1,3 +1,5 @@
+output = "/dev/null"
+
 reader = """
 Rust developer on NixOS, writing CLIs and TUIs. Self-hosts everything;
 runs Miniflux, Jellyfin, a Proxmox box. Rides road and gravel.
