@@ -8,7 +8,7 @@ use serde::Deserialize;
 #[derive(Clone, Debug, Default, Deserialize)]
 #[serde(default, deny_unknown_fields)]
 pub(crate) struct WebConfig {
-    /// The built web app (`web/dist`), served at `/`. Unset: no web app.
+    /// The built web app (`apps/web/dist`), served at `/`. Unset: no web app.
     pub(crate) dir: Option<PathBuf>,
 }
 

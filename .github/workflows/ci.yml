@@ -34,7 +34,7 @@ jobs:
           - typos
           - links
           - workflows
-          - rust-ci
+          - server::ci
           - web::ci
     steps:
       - name: Checkout the repository
@@ -54,7 +54,7 @@ jobs:
         uses: actions/cache@v6
         with:
           path: ~/.local/share/pnpm/store
-          key: pnpm-${{ runner.os }}-${{ hashFiles('web/pnpm-lock.yaml') }}
+          key: pnpm-${{ runner.os }}-${{ hashFiles('apps/web/pnpm-lock.yaml') }}
           restore-keys: pnpm-${{ runner.os }}-
       - name: Run just ${{ matrix.recipe }}
         run: nix develop .#ci --command just ${{ matrix.recipe }}
