@@ -72,6 +72,9 @@ interval = "7d"
 | `topic.<name>.question` | What Claude is asked about this topic's entries. |
 | `topic.<name>.feeds` | Feed-title substrings; a feed matches if its title contains one. |
 | `topic.<name>.interval` | How far back to look on a first run, e.g. `"24h"`, `"7d"`. |
+| `topic.<name>.web_search` | Optional, off by default. Also search the web for this topic; the pages Claude cites join the feed entries. Each search costs $0.01 plus the tokens of what it reads. |
+| `topic.<name>.max_searches` | Most web searches per run. Defaults to `3`. |
+| `topic.<name>.allowed_sites` | Optional. Sites the web search may use, e.g. `["blog.rust-lang.org"]`. Empty means any site. |
 
 Secret files are the reason `password_file` / `api_key_file` exist: point them at a sops-nix or
 systemd credential path and keep the key out of the config.

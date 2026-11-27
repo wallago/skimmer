@@ -13,26 +13,32 @@ use crate::{
 
 /// One turn in the conversation.
 #[derive(Serialize)]
-struct Msg<'a> {
+pub(super) struct Msg<'a> {
     /// `"user"` or `"assistant"`.
-    role: &'a str,
+    pub(super) role: &'a str,
     /// The turn's text.
-    content: &'a str,
+    pub(super) content: &'a str,
 }
 
 /// A capability declared on a request.
 #[derive(Serialize)]
-struct Tool {
+pub(super) struct Tool<'a> {
     /// Dated tool type, e.g. `web_search_20260209`.
     #[serde(rename = "type")]
-    kind: &'static str,
+    pub(super) kind: &'static str,
     /// Name Claude calls it by.
-    name: &'static str,
+    pub(super) name: &'static str,
+    /// Most calls Claude may make to it in one request.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(super) max_uses: Option<u32>,
+    /// Sites a web tool may read. Empty means any.
+    #[serde(skip_serializing_if = "<[String]>::is_empty")]
+    pub(super) allowed_domains: &'a [String],
 }
 
 /// Wrapper for `output_config`.
 #[derive(Serialize)]
-struct OutputConfig {
+pub(super) struct OutputConfig {
     /// How the response must be shaped.
     format: Format,
 }
@@ -49,28 +55,28 @@ struct Format {
 
 /// A request body.
 #[derive(Serialize)]
-struct Req<'a> {
+pub(super) struct Req<'a> {
     /// Model id.
-    model: String,
+    pub(super) model: String,
     /// Hard ceiling on generated tokens.
     #[serde(skip_serializing_if = "Option::is_none")]
-    max_tokens: Option<u32>,
+    pub(super) max_tokens: Option<u32>,
     /// The conversation.
-    messages: Vec<Msg<'a>>,
+    pub(super) messages: Vec<Msg<'a>>,
     /// Standing instructions: role, rules, output contract. Not a turn in the
     /// conversation. May also be an array of blocks if you ever need
     /// `cache_control` on it.
     #[serde(skip_serializing_if = "Option::is_none")]
-    system: Option<&'a str>,
+    pub(super) system: Option<&'a str>,
     /// Capabilities Claude may reach for. Server tools (`web_search`) run on
     /// Anthropic's side; custom tools come back to you as `tool_use` blocks.
     #[serde(skip_serializing_if = "Vec::is_empty")]
-    tools: Vec<Tool>,
+    pub(super) tools: Vec<Tool<'a>>,
     /// Holds three unrelated things: `format` (your JSON schema), `effort`
     /// ("low".."max", default "high" — controls thinking depth and spend),
     /// and `task_budget` (agentic loops only, not relevant here).
     #[serde(skip_serializing_if = "Option::is_none")]
-    output_config: Option<OutputConfig>,
+    pub(super) output_config: Option<OutputConfig>,
 }
 
 impl Claude {

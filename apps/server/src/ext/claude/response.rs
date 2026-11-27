@@ -51,12 +51,23 @@ impl Resp {
 }
 
 /// Token counts for one call.
-#[derive(Deserialize, Debug, PartialEq)]
+#[derive(Deserialize, Debug, Default, PartialEq)]
 pub(crate) struct Usage {
     /// Tokens billed at the input rate.
     pub input_tokens: u32,
     /// Tokens billed at the output rate.
     pub output_tokens: u32,
+    /// Server tool calls, billed per call on top of tokens.
+    #[serde(default)]
+    pub server_tool_use: ServerToolUse,
+}
+
+/// Server tool calls made while answering.
+#[derive(Deserialize, Debug, Default, PartialEq)]
+pub(crate) struct ServerToolUse {
+    /// Web searches run.
+    #[serde(default)]
+    pub web_search_requests: u32,
 }
 
 /// One block of the response. Anything that is not text is folded into

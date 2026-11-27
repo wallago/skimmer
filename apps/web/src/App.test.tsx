@@ -64,7 +64,7 @@ test("shows the morning popup, then the day's briefings", async () => {
 test("opening a briefing marks it viewed and shows its highlights", async () => {
   render(<App />);
   fireEvent.click(await screen.findByText("Later"));
-  const card = screen.getByText("Rust 2.0").closest(".card");
+  const card = (await screen.findByText("Rust 2.0")).closest(".card");
   if (!card) throw new Error("no card");
   fireEvent.pointerDown(card, { clientX: 10, clientY: 10 });
   fireEvent.pointerUp(card, { clientX: 10, clientY: 10 });
@@ -75,7 +75,7 @@ test("opening a briefing marks it viewed and shows its highlights", async () => 
 test("swiping right marks it read, with an undo", async () => {
   render(<App />);
   fireEvent.click(await screen.findByText("Later"));
-  const card = screen.getByText("Rust 2.0").closest(".card");
+  const card = (await screen.findByText("Rust 2.0")).closest(".card");
   if (!card) throw new Error("no card");
   fireEvent.pointerDown(card, { clientX: 10, clientY: 10 });
   fireEvent.pointerUp(card, { clientX: 200, clientY: 12 });

@@ -1,7 +1,6 @@
 //! A topic's briefing, as saved in the store.
 
 use chrono::{DateTime, Utc};
-
 use serde::Serialize;
 
 use super::topic::Topic;

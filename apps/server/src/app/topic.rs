@@ -7,7 +7,7 @@ use chrono::{DateTime, Utc};
 use super::store::Store;
 use crate::{
     ext::prelude::*,
-    prelude::{Topic as TopicExt, *},
+    prelude::{Result, Topic as TopicExt},
 };
 
 /// A configured topic.
@@ -22,6 +22,8 @@ pub(crate) struct Topic {
     context: String,
     /// The topic's name, as in the config and the store.
     name: String,
+    /// Web search limits, when the topic also searches the web.
+    web_search: Option<WebSearch>,
 }
 
 impl Topic {
@@ -51,6 +53,18 @@ impl Topic {
                 .filter(|feed| topic.get_feeds().iter().any(|p| feed.title.contains(p)))
                 .map(|feed| (feed.title.clone(), feed.clone()))
                 .collect();
+            if topic_feeds.is_empty() && !topic.get_feeds().is_empty() {
+                let mut known: Vec<&str> = rss
+                    .get_feeds()
+                    .iter()
+                    .map(|feed| feed.title.as_str())
+                    .collect();
+                known.sort_unstable();
+                tracing::warn!(
+                    "Topic {name}: no Miniflux feed title contains any of {:?}. Feed titles are: {known:?}",
+                    topic.get_feeds(),
+                );
+            }
             topics.insert(
                 name.clone(),
                 Topic {
@@ -59,6 +73,10 @@ impl Topic {
                     question: topic.get_question().to_string(),
                     context: topic.get_context().to_string(),
                     name: name.to_owned(),
+                    web_search: topic.get_web_search().map(|(max_uses, sites)| WebSearch {
+                        max_uses,
+                        allowed_domains: sites.to_vec(),
+                    }),
                 },
             );
         }
@@ -88,5 +106,10 @@ impl Topic {
     /// What the reader wants out of this topic. Empty when unset.
     pub(crate) fn get_context(&self) -> &str {
         &self.context
+    }
+
+    /// Web search limits, or [`None`] when the topic reads only its feeds.
+    pub(crate) fn get_web_search(&self) -> Option<&WebSearch> {
+        self.web_search.as_ref()
     }
 }
